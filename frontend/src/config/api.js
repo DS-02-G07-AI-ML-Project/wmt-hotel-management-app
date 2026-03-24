@@ -1,20 +1,31 @@
 const HOSTS = ['192.168.8.131', '10.0.2.2', 'localhost'];
 const PORT = 5000;
 
-let activeHost = HOSTS[0];
+const hostedBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim().replace(/\/+$/, '');
+
+let activeBaseUrl = hostedBaseUrl || `http://${HOSTS[0]}:${PORT}`;
 
 const normalizePath = (path) => (path.startsWith('/') ? path : `/${path}`);
 const buildBaseUrl = (host) => `http://${host}:${PORT}`;
-const buildUrl = (host, path) => `${buildBaseUrl(host)}${normalizePath(path)}`;
+const buildUrl = (baseUrl, path) => `${baseUrl}${normalizePath(path)}`;
+const localBaseUrls = HOSTS.map(buildBaseUrl);
+
+const getCandidateBaseUrls = () => {
+  const orderedLocal = [activeBaseUrl, ...localBaseUrls.filter((baseUrl) => baseUrl !== activeBaseUrl)];
+  if (hostedBaseUrl) {
+    return [hostedBaseUrl, ...orderedLocal.filter((baseUrl) => baseUrl !== hostedBaseUrl)];
+  }
+  return orderedLocal;
+};
 
 export const requestWithFallback = async (path, options = {}) => {
-  const orderedHosts = [activeHost, ...HOSTS.filter((host) => host !== activeHost)];
+  const orderedBaseUrls = getCandidateBaseUrls();
   let lastError = null;
 
-  for (const host of orderedHosts) {
+  for (const baseUrl of orderedBaseUrls) {
     try {
-      const response = await fetch(buildUrl(host, path), options);
-      activeHost = host;
+      const response = await fetch(buildUrl(baseUrl, path), options);
+      activeBaseUrl = baseUrl;
       return response;
     } catch (error) {
       lastError = error;
@@ -26,5 +37,5 @@ export const requestWithFallback = async (path, options = {}) => {
 
 export const getUploadUrl = (path) => {
   if (!path) return null;
-  return `${buildBaseUrl(activeHost)}${normalizePath(path)}`;
+  return `${activeBaseUrl}${normalizePath(path)}`;
 };

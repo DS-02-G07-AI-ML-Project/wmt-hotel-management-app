@@ -40,7 +40,9 @@ app.get('/', (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0';
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://192.168.8.131:${PORT}`);
+app.listen(PORT, HOST, () => {
+  const publicApiUrl = process.env.PUBLIC_API_URL || `http://localhost:${PORT}`;
+  console.log(`Server running on ${publicApiUrl}`);
 });

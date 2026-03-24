@@ -105,10 +105,17 @@ Expected output:
 cd ../frontend
 npm install
 npx expo install --fix
+cp .env.example .env
 npx expo start -c --lan
 ```
 
 Scan QR code with **Expo Go**.
+
+Set this in `frontend/.env` when using deployed backend:
+
+```env
+EXPO_PUBLIC_API_BASE_URL=https://your-backend-service.onrender.com
+```
 
 ---
 
@@ -118,6 +125,58 @@ Scan QR code with **Expo Go**.
 - Ensure all teammates are on the **same Wi-Fi network** for Expo Go + local API
 - In MongoDB Atlas, allow teammate IPs in **Network Access**
 - All teammates can share one Atlas cluster using their own `.env`
+
+---
+
+## ☁️ Backend Deployment (Render)
+
+Final evaluation requires hosted backend + mobile app connected to hosted API.
+
+### 1) Create Web Service
+- Sign in to Render
+- Click **New +** → **Web Service**
+- Connect GitHub repo: `DS-02-G07-AI-ML-Project/wmt-hotel-management-app`
+- Configure:
+	- **Root Directory:** `backend`
+	- **Runtime:** `Node`
+	- **Build Command:** `npm install`
+	- **Start Command:** `npm start`
+
+### 2) Add Environment Variables (Render)
+
+Add in Render dashboard:
+
+```env
+NODE_ENV=production
+PORT=10000
+MONGO_URI=<your-mongodb-atlas-uri>
+JWT_SECRET=<strong-random-secret>
+PUBLIC_API_URL=https://<your-render-service>.onrender.com
+```
+
+> Render sets `PORT` automatically; keeping `PORT=10000` optional in many setups.
+
+### 3) Deploy and Verify
+- Deploy service
+- Open: `https://<your-render-service>.onrender.com/`
+- Expected response: `Hotel Management API is running...`
+
+### 4) Connect Mobile App to Hosted API
+
+In `frontend/.env`:
+
+```env
+EXPO_PUBLIC_API_BASE_URL=https://<your-render-service>.onrender.com
+```
+
+Then restart Expo:
+
+```bash
+cd frontend
+npx expo start -c --lan
+```
+
+For final demo, ensure app works **without** local backend running.
 
 ---
 
@@ -179,10 +238,10 @@ http://<your-ip>:5000
 ## 🧪 Common Troubleshooting
 
 ### 1) `Network request failed` in Expo Go
-- Confirm backend is running
-- Confirm mobile + laptop are on same Wi-Fi
-- Confirm API URL uses laptop LAN IP and port `5000`
-- Try opening `http://<your-ip>:5000/` on mobile browser
+- Confirm backend is reachable (hosted URL for final demo)
+- If using local fallback, confirm mobile + laptop are on same Wi-Fi
+- Confirm `EXPO_PUBLIC_API_BASE_URL` is set correctly for production demo
+- Try opening your API root URL in mobile browser
 
 ### 2) MongoDB `ECONNREFUSED 127.0.0.1:27017`
 - You are likely using local Mongo URI without local Mongo service
