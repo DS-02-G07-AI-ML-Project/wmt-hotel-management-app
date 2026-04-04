@@ -24,7 +24,12 @@ const RoomDetailScreen = () => {
       setLoading(true);
       const response = await requestWithFallback(`/api/rooms/${roomId}`);
       const json = await response.json();
-      
+
+      if (!response.ok) {
+        setError(json.message || `Request failed (${response.status})`);
+        return;
+      }
+
       if (json.success) {
         setRoom(json.data);
       } else {
@@ -54,6 +59,11 @@ const RoomDetailScreen = () => {
                   headers: { 'Accept': 'application/json' }
               });
               const json = await response.json();
+
+              if (!response.ok) {
+                Alert.alert('Error', json.message || `Request failed (${response.status})`);
+                return;
+              }
 
               if (json.success) {
                 Alert.alert("Deleted", "Room has been deleted successfully");

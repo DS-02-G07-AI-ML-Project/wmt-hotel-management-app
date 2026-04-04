@@ -1,63 +1,64 @@
+import 'react-native-gesture-handler';
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import RoomListScreen from './src/screens/RoomListScreen';
-import AddRoomScreen from './src/screens/AddRoomScreen';
-import RoomDetailScreen from './src/screens/RoomDetailScreen';
-import EditRoomScreen from './src/screens/EditRoomScreen';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
+import MainTabs from './src/navigation/MainTabs';
 
-const Stack = createStackNavigator();
+const AuthStack = createStackNavigator();
 
-export default function App() {
+function AuthNavigator() {
+  return (
+    <AuthStack.Navigator
+      screenOptions={{
+        headerStyle: styles.header,
+        headerTitleStyle: styles.headerTitle,
+        headerTintColor: '#1f2937',
+        cardStyle: styles.screen,
+      }}
+    >
+      <AuthStack.Screen name="Login" component={LoginScreen} options={{ title: 'Sign in' }} />
+      <AuthStack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register' }} />
+    </AuthStack.Navigator>
+  );
+}
+
+function RootNavigator() {
+  const { ready, token } = useAuth();
+
+  if (!ready) {
+    return (
+      <View style={styles.boot}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName="Rooms"
-        screenOptions={{
-          headerStyle: styles.header,
-          headerTitleStyle: styles.headerTitle,
-          headerTintColor: '#1f2937',
-          cardStyle: styles.screen,
-        }}
-      >
-        <Stack.Screen 
-          name="Rooms" 
-          component={RoomListScreen} 
-          options={({ navigation }) => ({ 
-            title: 'Available Rooms',
-            headerRight: () => (
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => navigation.navigate('AddRoom')}
-              >
-                <Text style={styles.addButtonText}>＋ Add Room</Text>
-              </TouchableOpacity>
-            ),
-          })}
-        />
-        <Stack.Screen 
-          name="AddRoom" 
-          component={AddRoomScreen} 
-          options={{ title: 'Add New Room' }} 
-        />
-        <Stack.Screen 
-          name="RoomDetail" 
-          component={RoomDetailScreen} 
-          options={{ title: 'Room Details' }} 
-        />
-        <Stack.Screen 
-          name="EditRoom" 
-          component={EditRoomScreen} 
-          options={{ title: 'Edit Room' }} 
-        />
-        {/* Additional screens (e.g., Login, Register) will be added here */}
-      </Stack.Navigator>
+      {token ? <MainTabs /> : <AuthNavigator />}
     </NavigationContainer>
   );
 }
 
+export default function App() {
+  return (
+    <AuthProvider>
+      <RootNavigator />
+    </AuthProvider>
+  );
+}
+
 const styles = StyleSheet.create({
+  boot: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f2f5fb',
+  },
   screen: {
     backgroundColor: '#f2f5fb',
   },
@@ -73,17 +74,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#0f172a',
-  },
-  addButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-  },
-  addButtonText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 12,
   },
 });

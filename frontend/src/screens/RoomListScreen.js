@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  StyleSheet, 
-  ActivityIndicator, 
-  Image, 
-  TouchableOpacity 
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { requestWithFallback, getUploadUrl } from '../config/api';
+import { useListScreenHeader } from '../hooks/useListScreenHeader';
 
 const RoomListScreen = ({ navigation }) => {
   const [rooms, setRooms] = useState([]);
@@ -17,17 +19,17 @@ const RoomListScreen = ({ navigation }) => {
 
   const availableCount = rooms.filter((room) => room.status === 'Available').length;
 
-  useEffect(() => {
-    fetchRooms();
-  }, []);
-
-  const fetchRooms = async () => {
+  const fetchRooms = useCallback(async () => {
     try {
       setError(null);
       setLoading(true);
       const response = await requestWithFallback('/api/rooms');
       const json = await response.json();
-      
+
+      if (!response.ok) {
+        throw new Error(json.message || `Server error (${response.status})`);
+      }
+
       if (json.success) {
         setRooms(json.data);
       } else {
@@ -38,7 +40,19 @@ const RoomListScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchRooms();
+    }, [fetchRooms])
+  );
+
+  useListScreenHeader(navigation, {
+    showSignOut: true,
+    addRoute: 'AddRoom',
+    addLabel: '＋ Add Room',
+  });
 
   const renderRoomItem = ({ item }) => {
     // Handling local image paths from the backend (assuming Multer saved to 'uploads/')
@@ -47,9 +61,9 @@ const RoomListScreen = ({ navigation }) => {
       : 'https://via.placeholder.com/150?text=No+Image';
 
     return (
-      <TouchableOpacity 
-        style={styles.card} 
-        onPress={() => console.log('Navigate to RoomDetails', item._id)}
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate('RoomDetail', { roomId: item._id })}
         activeOpacity={0.9}
       >
         <View style={styles.imageWrap}>

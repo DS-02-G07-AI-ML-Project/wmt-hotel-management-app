@@ -256,6 +256,52 @@ npx expo install --fix
 
 ---
 
+## ✅ Smoke Tests
+
+Lightweight checks are now available for both apps.
+
+### Backend smoke test
+
+```bash
+cd backend
+npm test
+```
+
+Validates:
+- `.env.example` includes required keys
+- JavaScript files parse successfully
+- API routers load with registered routes
+- backend starts in smoke mode and responds on `GET /`
+
+### Backend CRUD integration test (6 core modules)
+
+```bash
+cd backend
+npm run test:crud
+```
+
+Runs live API CRUD checks against an isolated temporary MongoDB database for:
+- Rooms
+- Bookings
+- Staff
+- Payments
+- Complaints
+- Visitors
+
+### Frontend smoke test
+
+```bash
+cd frontend
+npm test
+```
+
+Validates:
+- required app/config files exist
+- `.env.example` includes expected Expo API keys
+- Expo can export an Android bundle (`expo export --platform android`)
+
+---
+
 ## 🤝 Collaboration Workflow
 
 ```bash

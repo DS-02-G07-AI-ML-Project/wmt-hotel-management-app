@@ -7,12 +7,21 @@ const errorHandler = require('./middleware/errorMiddleware');
 // Route files
 const roomRoutes = require('./routes/roomRoutes');
 const userRoutes = require('./routes/userRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const staffRoutes = require('./routes/staffRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const complaintRoutes = require('./routes/complaintRoutes');
+const visitorRoutes = require('./routes/visitorRoutes');
 
 // Load env vars
 dotenv.config();
 
 // Connect to database
-connectDB(); // Ensure you have MONGO_URI in your .env before calling this!
+if (process.env.SMOKE_TEST === '1') {
+  console.log('SMOKE_TEST=1 detected: skipping MongoDB connection');
+} else {
+  connectDB(); // Ensure you have MONGO_URI in your .env before calling this!
+}
 
 const app = express();
 
@@ -23,13 +32,12 @@ app.use('/uploads', express.static('uploads')); // For Multer uploaded files
 
 // Mount routers
 app.use('/api/rooms', roomRoutes);
-app.use('/api/users', userRoutes); // Authentication
-// Further endpoints for the team:
-// app.use('/api/bookings', require('./routes/bookingRoutes'));
-// app.use('/api/staff', require('./routes/staffRoutes'));
-// app.use('/api/payments', require('./routes/paymentRoutes'));
-// app.use('/api/complaints', require('./routes/complaintRoutes'));
-// app.use('/api/visitors', require('./routes/visitorRoutes'));
+app.use('/api/users', userRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/staff', staffRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/complaints', complaintRoutes);
+app.use('/api/visitors', visitorRoutes);
 
 // Default route
 app.get('/', (req, res) => {
@@ -43,6 +51,7 @@ const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';
 
 app.listen(PORT, HOST, () => {
-  const publicApiUrl = process.env.PUBLIC_API_URL || `http://localhost:${PORT}`;
-  console.log(`Server running on ${publicApiUrl}`);
+  const hint = process.env.PUBLIC_API_URL || `http://localhost:${PORT}`;
+  console.log(`API listening on http://0.0.0.0:${PORT} (reachable on LAN)`);
+  console.log(`Set EXPO_PUBLIC_API_BASE_URL on the app to your PC LAN IP, e.g. ${hint}`);
 });

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
-  View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert 
+  View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { requestWithFallback } from '../config/api';
 const ROOM_TYPES = ['Single', 'Double', 'Dormitory', 'Suite']; // Aligning with backend schema
 
@@ -11,6 +12,7 @@ const AddRoomScreen = ({ navigation }) => {
   const [pricePerMonth, setPricePerMonth] = useState(''); 
   const [capacity, setCapacity] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedPhotos, setSelectedPhotos] = useState([]);
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -32,31 +34,64 @@ const AddRoomScreen = ({ navigation }) => {
     return valid;
   };
 
+  const handlePickImages = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Please allow photo library access to upload room images.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      allowsMultipleSelection: true,
+      selectionLimit: 5,
+      quality: 0.8,
+    });
+
+    if (result.canceled) return;
+
+    const assets = (result.assets || []).slice(0, 5);
+    setSelectedPhotos(assets);
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
     setLoading(true);
 
-    // Prepare JSON payload, mapping pricePerMonth to backend's pricePerNight
-    const payload = {
-      roomNumber,
-      type,
-      pricePerNight: Number(pricePerMonth),
-      capacity: Number(capacity),
-      description,
-      status: 'Available'
-    };
+    const formData = new FormData();
+    formData.append('roomNumber', roomNumber.trim());
+    formData.append('type', type);
+    formData.append('pricePerNight', String(Number(pricePerMonth)));
+    formData.append('capacity', String(Number(capacity)));
+    formData.append('description', description.trim());
+    formData.append('status', 'Available');
+
+    selectedPhotos.forEach((asset, index) => {
+      const extension = asset.uri.split('.').pop() || 'jpg';
+      const name = asset.fileName || `room-photo-${Date.now()}-${index}.${extension}`;
+      const typeName = asset.mimeType || `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+      formData.append('photos', {
+        uri: asset.uri,
+        name,
+        type: typeName,
+      });
+    });
 
     try {
       const response = await requestWithFallback('/api/rooms', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: formData
       });
 
       const json = await response.json();
+      if (!response.ok) {
+        Alert.alert('Error', json.message || `Request failed (${response.status})`);
+        return;
+      }
       if (json.success) {
         Alert.alert("Success", "Room added successfully!");
         navigation.goBack();
@@ -133,9 +168,20 @@ const AddRoomScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.imagePickerGroup}>
-        <TouchableOpacity style={styles.imagePickerButton} onPress={() => Alert.alert("Upload Pipeline", "Multer pipeline integration pending in next phase.")}>
-          <Text style={styles.imagePickerText}>Select Image (Placeholder)</Text>
+        <TouchableOpacity style={styles.imagePickerButton} onPress={handlePickImages}>
+          <Text style={styles.imagePickerText}>
+            {selectedPhotos.length > 0
+              ? `${selectedPhotos.length} image(s) selected (tap to change)`
+              : 'Select up to 5 images'}
+          </Text>
         </TouchableOpacity>
+        {selectedPhotos.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.previewRow}>
+            {selectedPhotos.map((asset, idx) => (
+              <Image key={`${asset.uri}-${idx}`} source={{ uri: asset.uri }} style={styles.previewImage} />
+            ))}
+          </ScrollView>
+        ) : null}
       </View>
 
       <TouchableOpacity 
@@ -209,6 +255,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   imagePickerText: { color: '#475569', fontSize: 14, fontWeight: '600' },
+  previewRow: { marginTop: 10, gap: 8 },
+  previewImage: {
+    width: 82,
+    height: 82,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    marginRight: 8,
+  },
   submitButton: {
     backgroundColor: '#16a34a',
     paddingVertical: 15,
