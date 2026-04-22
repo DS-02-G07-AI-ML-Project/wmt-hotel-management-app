@@ -2,33 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
 
-const STATUSES = ['pending', 'confirmed', 'checked_in', 'cancelled', 'completed'];
+const STATUSES = ['Visible', 'Hidden'];
 
-export default function BookingFormScreen({ navigation, route }) {
+export default function ReviewFormScreen({ navigation, route }) {
   const editId = route.params?.id;
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
-  const [rooms, setRooms] = useState([]);
+
   const [users, setUsers] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [experiences, setExperiences] = useState([]);
 
   const [userId, setUserId] = useState('');
   const [roomId, setRoomId] = useState('');
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [status, setStatus] = useState('pending');
-  const [notes, setNotes] = useState('');
-  const [totalAmount, setTotalAmount] = useState('');
+  const [experienceId, setExperienceId] = useState('');
+  const [rating, setRating] = useState('5');
+  const [comment, setComment] = useState('');
+  const [status, setStatus] = useState('Visible');
 
   useEffect(() => {
     (async () => {
       try {
-        const [roomRes, userRes] = await Promise.all([
-          requestWithFallback('/api/rooms'),
+        const [uRes, rRes, xRes] = await Promise.all([
           requestWithFallback('/api/users'),
+          requestWithFallback('/api/rooms'),
+          requestWithFallback('/api/experiences'),
         ]);
-        const [roomJson, userJson] = await Promise.all([roomRes.json(), userRes.json()]);
-        if (roomJson.success) setRooms(roomJson.data || []);
-        if (userJson.success) setUsers(userJson.data || []);
+        const [uJson, rJson, xJson] = await Promise.all([uRes.json(), rRes.json(), xRes.json()]);
+        if (uJson.success) setUsers(uJson.data || []);
+        if (rJson.success) setRooms(rJson.data || []);
+        if (xJson.success) setExperiences(xJson.data || []);
       } catch {
         // ignore
       }
@@ -39,20 +42,19 @@ export default function BookingFormScreen({ navigation, route }) {
     if (!editId) return;
     (async () => {
       try {
-        const res = await requestWithFallback(`/api/bookings/${editId}`);
+        const res = await requestWithFallback(`/api/reviews/${editId}`);
         const json = await res.json();
         if (json.success && json.data) {
-          const b = json.data;
-          setUserId(typeof b.user === 'object' ? b.user._id : b.user || '');
-          setRoomId(typeof b.room === 'object' ? b.room._id : b.room || '');
-          setCheckIn(b.checkIn ? String(b.checkIn).slice(0, 10) : '');
-          setCheckOut(b.checkOut ? String(b.checkOut).slice(0, 10) : '');
-          setStatus(b.status || 'pending');
-          setNotes(b.notes || '');
-          setTotalAmount(b.totalAmount != null ? String(b.totalAmount) : '');
+          const v = json.data;
+          setUserId(v.user && typeof v.user === 'object' ? v.user._id : v.user || '');
+          setRoomId(v.room && typeof v.room === 'object' ? v.room._id : v.room || '');
+          setExperienceId(v.experience && typeof v.experience === 'object' ? v.experience._id : v.experience || '');
+          setRating(v.rating != null ? String(v.rating) : '5');
+          setComment(v.comment || '');
+          setStatus(v.status || 'Visible');
         }
       } catch {
-        Alert.alert('Error', 'Could not load booking');
+        Alert.alert('Error', 'Could not load');
       } finally {
         setLoading(false);
       }
@@ -60,24 +62,23 @@ export default function BookingFormScreen({ navigation, route }) {
   }, [editId]);
 
   const submit = async () => {
-    if (!userId || !roomId || !checkIn || !checkOut) {
-      Alert.alert('Validation', 'User, room, check-in and check-out are required.');
+    if (!userId.trim() || !comment.trim()) {
+      Alert.alert('Validation', 'User and comment are required.');
       return;
     }
 
     const payload = {
-      user: userId,
-      room: roomId,
-      checkIn: new Date(checkIn).toISOString(),
-      checkOut: new Date(checkOut).toISOString(),
+      user: userId.trim(),
+      room: roomId.trim() || null,
+      experience: experienceId.trim() || null,
+      rating: Number(rating),
+      comment: comment.trim(),
       status,
-      notes: notes.trim(),
-      totalAmount: totalAmount ? Number(totalAmount) : 0,
     };
 
     setSaving(true);
     try {
-      const res = await requestWithFallback(editId ? `/api/bookings/${editId}` : '/api/bookings', {
+      const res = await requestWithFallback(editId ? `/api/reviews/${editId}` : '/api/reviews', {
         method: editId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -87,7 +88,7 @@ export default function BookingFormScreen({ navigation, route }) {
         Alert.alert('Error', json.message || 'Save failed');
         return;
       }
-      Alert.alert('Saved', 'Booking saved.');
+      Alert.alert('Saved', 'Review saved.');
       navigation.goBack();
     } catch {
       Alert.alert('Error', 'Network error');
@@ -104,7 +105,7 @@ export default function BookingFormScreen({ navigation, route }) {
       <TextInput style={styles.input} value={userId} onChangeText={setUserId} placeholder="Mongo id" />
       {users.length > 0 ? (
         <View style={styles.row}>
-          {users.slice(0, 8).map((u) => (
+          {users.slice(0, 6).map((u) => (
             <TouchableOpacity key={u._id} style={styles.chip} onPress={() => setUserId(u._id)}>
               <Text style={styles.chipText}>{u.name}</Text>
             </TouchableOpacity>
@@ -112,11 +113,11 @@ export default function BookingFormScreen({ navigation, route }) {
         </View>
       ) : null}
 
-      <Text style={styles.label}>Room ID *</Text>
-      <TextInput style={styles.input} value={roomId} onChangeText={setRoomId} placeholder="Mongo id" />
+      <Text style={styles.label}>Room ID (optional)</Text>
+      <TextInput style={styles.input} value={roomId} onChangeText={setRoomId} />
       {rooms.length > 0 ? (
         <View style={styles.row}>
-          {rooms.slice(0, 8).map((r) => (
+          {rooms.slice(0, 6).map((r) => (
             <TouchableOpacity key={r._id} style={styles.chip} onPress={() => setRoomId(r._id)}>
               <Text style={styles.chipText}>#{r.roomNumber}</Text>
             </TouchableOpacity>
@@ -124,11 +125,23 @@ export default function BookingFormScreen({ navigation, route }) {
         </View>
       ) : null}
 
-      <Text style={styles.label}>Check-in * (YYYY-MM-DD)</Text>
-      <TextInput style={styles.input} value={checkIn} onChangeText={setCheckIn} placeholder="2026-04-01" />
+      <Text style={styles.label}>Experience ID (optional)</Text>
+      <TextInput style={styles.input} value={experienceId} onChangeText={setExperienceId} />
+      {experiences.length > 0 ? (
+        <View style={styles.row}>
+          {experiences.slice(0, 6).map((x) => (
+            <TouchableOpacity key={x._id} style={styles.chip} onPress={() => setExperienceId(x._id)}>
+              <Text style={styles.chipText}>{x.title}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
 
-      <Text style={styles.label}>Check-out * (YYYY-MM-DD)</Text>
-      <TextInput style={styles.input} value={checkOut} onChangeText={setCheckOut} placeholder="2026-04-03" />
+      <Text style={styles.label}>Rating (1-5)</Text>
+      <TextInput style={styles.input} value={rating} onChangeText={setRating} keyboardType="number-pad" />
+
+      <Text style={styles.label}>Comment *</Text>
+      <TextInput style={[styles.input, styles.tall]} value={comment} onChangeText={setComment} multiline />
 
       <Text style={styles.label}>Status</Text>
       <View style={styles.row}>
@@ -138,12 +151,6 @@ export default function BookingFormScreen({ navigation, route }) {
           </TouchableOpacity>
         ))}
       </View>
-
-      <Text style={styles.label}>Total amount</Text>
-      <TextInput style={styles.input} value={totalAmount} onChangeText={setTotalAmount} keyboardType="decimal-pad" />
-
-      <Text style={styles.label}>Notes</Text>
-      <TextInput style={[styles.input, styles.tall]} value={notes} onChangeText={setNotes} multiline />
 
       <TouchableOpacity style={styles.save} onPress={submit} disabled={saving}>
         {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save</Text>}
@@ -158,7 +165,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   label: { fontWeight: '600', color: '#475569', marginBottom: 6, marginTop: 8 },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 16 },
-  tall: { minHeight: 80, textAlignVertical: 'top' },
+  tall: { minHeight: 90, textAlignVertical: 'top' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#e2e8f0' },
   chipOn: { backgroundColor: '#2563eb' },

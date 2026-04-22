@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
 
 export default function BookingDetailScreen({ navigation, route }) {
@@ -59,45 +51,25 @@ export default function BookingDetailScreen({ navigation, route }) {
     ]);
   };
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color="#2563eb" size="large" />
-      </View>
-    );
-  }
-  if (err || !item) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.err}>{err || 'Not found'}</Text>
-      </View>
-    );
-  }
+  if (loading) return <View style={styles.center}><ActivityIndicator color="#2563eb" size="large" /></View>;
+  if (err || !item) return <View style={styles.center}><Text style={styles.err}>{err || 'Not found'}</Text></View>;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.h1}>{item.guestName}</Text>
-      <Text style={styles.row}>Email: {item.guestEmail || '—'}</Text>
-      <Text style={styles.row}>Phone: {item.guestPhone || '—'}</Text>
-      <Text style={styles.row}>Room: {item.room?.roomNumber || item.room?._id || '—'}</Text>
+      <Text style={styles.h1}>{item.user?.name || 'Customer booking'}</Text>
+      <Text style={styles.row}>Customer email: {item.user?.email || '-'}</Text>
+      <Text style={styles.row}>Room: {item.room?.roomNumber || item.room?._id || '-'}</Text>
       <Text style={styles.row}>Status: {item.status}</Text>
       <Text style={styles.row}>Check-in: {new Date(item.checkIn).toLocaleString()}</Text>
       <Text style={styles.row}>Check-out: {new Date(item.checkOut).toLocaleString()}</Text>
       <Text style={styles.row}>Total: ${item.totalAmount ?? 0}</Text>
       {item.notes ? <Text style={styles.row}>Notes: {item.notes}</Text> : null}
 
-      <TouchableOpacity
-        style={styles.edit}
-        onPress={() => navigation.navigate('BookingForm', { id: item._id })}
-      >
+      <TouchableOpacity style={styles.edit} onPress={() => navigation.navigate('BookingForm', { id: item._id })}>
         <Text style={styles.editText}>Edit</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.del} onPress={onDelete} disabled={deleting}>
-        {deleting ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.delText}>Delete</Text>
-        )}
+        {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.delText}>Delete</Text>}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -110,20 +82,8 @@ const styles = StyleSheet.create({
   h1: { fontSize: 22, fontWeight: '800', color: '#0f172a', marginBottom: 16 },
   row: { fontSize: 15, color: '#334155', marginBottom: 8 },
   err: { color: '#b91c1c' },
-  edit: {
-    marginTop: 24,
-    backgroundColor: '#ea580c',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
+  edit: { marginTop: 24, backgroundColor: '#ea580c', paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
   editText: { color: '#fff', fontWeight: '700' },
-  del: {
-    marginTop: 12,
-    backgroundColor: '#dc2626',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
+  del: { marginTop: 12, backgroundColor: '#dc2626', paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
   delText: { color: '#fff', fontWeight: '700' },
 });

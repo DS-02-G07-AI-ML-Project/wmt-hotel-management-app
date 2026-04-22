@@ -1,16 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
 
-export default function VisitorDetailScreen({ navigation, route }) {
+export default function UserDetailScreen({ navigation, route }) {
   const { id } = route.params;
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +12,7 @@ export default function VisitorDetailScreen({ navigation, route }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await requestWithFallback(`/api/visitors/${id}`);
+        const res = await requestWithFallback(`/api/users/${id}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
         if (json.success) setItem(json.data);
@@ -34,7 +26,7 @@ export default function VisitorDetailScreen({ navigation, route }) {
   }, [id]);
 
   const onDelete = () => {
-    Alert.alert('Delete visitor', 'Are you sure?', [
+    Alert.alert('Delete user', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -42,7 +34,7 @@ export default function VisitorDetailScreen({ navigation, route }) {
         onPress: async () => {
           setDeleting(true);
           try {
-            const res = await requestWithFallback(`/api/visitors/${id}`, { method: 'DELETE' });
+            const res = await requestWithFallback(`/api/users/${id}`, { method: 'DELETE' });
             const json = await res.json();
             if (!res.ok) {
               Alert.alert('Error', json.message || 'Failed');
@@ -59,39 +51,17 @@ export default function VisitorDetailScreen({ navigation, route }) {
     ]);
   };
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color="#2563eb" size="large" />
-      </View>
-    );
-  }
-  if (err || !item) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.err}>{err || 'Not found'}</Text>
-      </View>
-    );
-  }
+  if (loading) return <View style={styles.center}><ActivityIndicator color="#2563eb" size="large" /></View>;
+  if (err || !item) return <View style={styles.center}><Text style={styles.err}>{err || 'Not found'}</Text></View>;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.h1}>{item.fullName}</Text>
-      <Text style={styles.row}>ID / Passport: {item.idNumber || '—'}</Text>
-      <Text style={styles.row}>Phone: {item.phone || '—'}</Text>
-      <Text style={styles.row}>Purpose: {item.purpose || '—'}</Text>
-      <Text style={styles.row}>Host: {item.hostName || '—'}</Text>
-      <Text style={styles.row}>Badge: {item.badgeNumber || '—'}</Text>
-      <Text style={styles.row}>Check-in: {new Date(item.checkIn).toLocaleString()}</Text>
-      <Text style={styles.row}>
-        Check-out: {item.checkOut ? new Date(item.checkOut).toLocaleString() : '—'}
-      </Text>
-      <Text style={styles.row}>Status: {item.status}</Text>
+      <Text style={styles.h1}>{item.name}</Text>
+      <Text style={styles.row}>Email: {item.email}</Text>
+      <Text style={styles.row}>Phone: {item.phone || '-'}</Text>
+      <Text style={styles.row}>Role: {item.role}</Text>
 
-      <TouchableOpacity
-        style={styles.edit}
-        onPress={() => navigation.navigate('VisitorForm', { id: item._id })}
-      >
+      <TouchableOpacity style={styles.edit} onPress={() => navigation.navigate('UserForm', { id: item._id })}>
         <Text style={styles.editText}>Edit</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.del} onPress={onDelete} disabled={deleting}>
@@ -108,20 +78,8 @@ const styles = StyleSheet.create({
   h1: { fontSize: 22, fontWeight: '800', color: '#0f172a', marginBottom: 16 },
   row: { fontSize: 15, color: '#334155', marginBottom: 8 },
   err: { color: '#b91c1c' },
-  edit: {
-    marginTop: 24,
-    backgroundColor: '#ea580c',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
+  edit: { marginTop: 24, backgroundColor: '#ea580c', paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
   editText: { color: '#fff', fontWeight: '700' },
-  del: {
-    marginTop: 12,
-    backgroundColor: '#dc2626',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
+  del: { marginTop: 12, backgroundColor: '#dc2626', paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
   delText: { color: '#fff', fontWeight: '700' },
 });

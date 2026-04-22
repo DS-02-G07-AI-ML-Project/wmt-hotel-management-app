@@ -69,7 +69,7 @@ export default function BookingListScreen({ navigation }) {
             style={styles.card}
             onPress={() => navigation.navigate('BookingDetail', { id: item._id })}
           >
-            <Text style={styles.title}>{item.guestName}</Text>
+            <Text style={styles.title}>{item.user?.name || 'Customer booking'}</Text>
             <Text style={styles.sub}>
               {item.room?.roomNumber ? `Room ${item.room.roomNumber}` : 'Room'} · {item.status}
             </Text>

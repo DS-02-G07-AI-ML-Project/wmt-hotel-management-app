@@ -13,29 +13,29 @@ import BookingListScreen from '../screens/bookings/BookingListScreen';
 import BookingDetailScreen from '../screens/bookings/BookingDetailScreen';
 import BookingFormScreen from '../screens/bookings/BookingFormScreen';
 
-import StaffListScreen from '../screens/staff/StaffListScreen';
-import StaffDetailScreen from '../screens/staff/StaffDetailScreen';
-import StaffFormScreen from '../screens/staff/StaffFormScreen';
+import UserListScreen from '../screens/users/UserListScreen';
+import UserDetailScreen from '../screens/users/UserDetailScreen';
+import UserFormScreen from '../screens/users/UserFormScreen';
 
 import PaymentListScreen from '../screens/payments/PaymentListScreen';
 import PaymentDetailScreen from '../screens/payments/PaymentDetailScreen';
 import PaymentFormScreen from '../screens/payments/PaymentFormScreen';
 
-import ComplaintListScreen from '../screens/complaints/ComplaintListScreen';
-import ComplaintDetailScreen from '../screens/complaints/ComplaintDetailScreen';
-import ComplaintFormScreen from '../screens/complaints/ComplaintFormScreen';
+import ExperienceListScreen from '../screens/experiences/ExperienceListScreen';
+import ExperienceDetailScreen from '../screens/experiences/ExperienceDetailScreen';
+import ExperienceFormScreen from '../screens/experiences/ExperienceFormScreen';
 
-import VisitorListScreen from '../screens/visitors/VisitorListScreen';
-import VisitorDetailScreen from '../screens/visitors/VisitorDetailScreen';
-import VisitorFormScreen from '../screens/visitors/VisitorFormScreen';
+import ReviewListScreen from '../screens/reviews/ReviewListScreen';
+import ReviewDetailScreen from '../screens/reviews/ReviewDetailScreen';
+import ReviewFormScreen from '../screens/reviews/ReviewFormScreen';
 
 const Tab = createBottomTabNavigator();
 const RoomStack = createStackNavigator();
 const BookingStack = createStackNavigator();
-const StaffStack = createStackNavigator();
+const UserStack = createStackNavigator();
 const PaymentStack = createStackNavigator();
-const ComplaintStack = createStackNavigator();
-const VisitorStack = createStackNavigator();
+const ExperienceStack = createStackNavigator();
+const ReviewStack = createStackNavigator();
 
 function RoomStackScreen() {
   return (
@@ -58,13 +58,13 @@ function BookingStackScreen() {
   );
 }
 
-function StaffStackScreen() {
+function UserStackScreen() {
   return (
-    <StaffStack.Navigator initialRouteName="StaffList" screenOptions={stackOptions}>
-      <StaffStack.Screen name="StaffList" component={StaffListScreen} options={{ title: 'Staff' }} />
-      <StaffStack.Screen name="StaffDetail" component={StaffDetailScreen} />
-      <StaffStack.Screen name="StaffForm" component={StaffFormScreen} options={{ title: 'Staff member' }} />
-    </StaffStack.Navigator>
+    <UserStack.Navigator initialRouteName="UserList" screenOptions={stackOptions}>
+      <UserStack.Screen name="UserList" component={UserListScreen} options={{ title: 'Users' }} />
+      <UserStack.Screen name="UserDetail" component={UserDetailScreen} />
+      <UserStack.Screen name="UserForm" component={UserFormScreen} options={{ title: 'User' }} />
+    </UserStack.Navigator>
   );
 }
 
@@ -78,23 +78,23 @@ function PaymentStackScreen() {
   );
 }
 
-function ComplaintStackScreen() {
+function ExperienceStackScreen() {
   return (
-    <ComplaintStack.Navigator initialRouteName="ComplaintList" screenOptions={stackOptions}>
-      <ComplaintStack.Screen name="ComplaintList" component={ComplaintListScreen} options={{ title: 'Complaints' }} />
-      <ComplaintStack.Screen name="ComplaintDetail" component={ComplaintDetailScreen} />
-      <ComplaintStack.Screen name="ComplaintForm" component={ComplaintFormScreen} options={{ title: 'Complaint' }} />
-    </ComplaintStack.Navigator>
+    <ExperienceStack.Navigator initialRouteName="ExperienceList" screenOptions={stackOptions}>
+      <ExperienceStack.Screen name="ExperienceList" component={ExperienceListScreen} options={{ title: 'Experiences' }} />
+      <ExperienceStack.Screen name="ExperienceDetail" component={ExperienceDetailScreen} />
+      <ExperienceStack.Screen name="ExperienceForm" component={ExperienceFormScreen} options={{ title: 'Experience' }} />
+    </ExperienceStack.Navigator>
   );
 }
 
-function VisitorStackScreen() {
+function ReviewStackScreen() {
   return (
-    <VisitorStack.Navigator initialRouteName="VisitorList" screenOptions={stackOptions}>
-      <VisitorStack.Screen name="VisitorList" component={VisitorListScreen} options={{ title: 'Visitors' }} />
-      <VisitorStack.Screen name="VisitorDetail" component={VisitorDetailScreen} />
-      <VisitorStack.Screen name="VisitorForm" component={VisitorFormScreen} options={{ title: 'Visitor' }} />
-    </VisitorStack.Navigator>
+    <ReviewStack.Navigator initialRouteName="ReviewList" screenOptions={stackOptions}>
+      <ReviewStack.Screen name="ReviewList" component={ReviewListScreen} options={{ title: 'Reviews' }} />
+      <ReviewStack.Screen name="ReviewDetail" component={ReviewDetailScreen} />
+      <ReviewStack.Screen name="ReviewForm" component={ReviewFormScreen} options={{ title: 'Review' }} />
+    </ReviewStack.Navigator>
   );
 }
 
@@ -125,10 +125,10 @@ export default function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="StaffTab"
-        component={StaffStackScreen}
+        name="UsersTab"
+        component={UserStackScreen}
         options={{
-          title: 'Staff',
+          title: 'Users',
           tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
         }}
       />
@@ -141,19 +141,19 @@ export default function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="ComplaintsTab"
-        component={ComplaintStackScreen}
+        name="ExperiencesTab"
+        component={ExperienceStackScreen}
         options={{
-          title: 'Issues',
-          tabBarIcon: ({ color, size }) => <Ionicons name="warning" size={size} color={color} />,
+          title: 'Experiences',
+          tabBarIcon: ({ color, size }) => <Ionicons name="map" size={size} color={color} />,
         }}
       />
       <Tab.Screen
-        name="VisitorsTab"
-        component={VisitorStackScreen}
+        name="ReviewsTab"
+        component={ReviewStackScreen}
         options={{
-          title: 'Visitors',
-          tabBarIcon: ({ color, size }) => <Ionicons name="enter-outline" size={size} color={color} />,
+          title: 'Reviews',
+          tabBarIcon: ({ color, size }) => <Ionicons name="star" size={size} color={color} />,
         }}
       />
     </Tab.Navigator>

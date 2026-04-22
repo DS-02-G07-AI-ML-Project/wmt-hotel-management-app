@@ -21,13 +21,14 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     setError('');
-    if (!email.trim() || !password) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
       setError('Enter email and password.');
       return;
     }
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(normalizedEmail, password);
     } catch (e) {
       setError(e.message || 'Login failed');
     } finally {

@@ -60,10 +60,9 @@ function checkRouteWiring() {
     ['/api/rooms', '../routes/roomRoutes'],
     ['/api/users', '../routes/userRoutes'],
     ['/api/bookings', '../routes/bookingRoutes'],
-    ['/api/staff', '../routes/staffRoutes'],
     ['/api/payments', '../routes/paymentRoutes'],
-    ['/api/complaints', '../routes/complaintRoutes'],
-    ['/api/visitors', '../routes/visitorRoutes'],
+    ['/api/experiences', '../routes/experienceRoutes'],
+    ['/api/reviews', '../routes/reviewRoutes'],
   ];
 
   for (const [mountPath, modulePath] of routeDefs) {

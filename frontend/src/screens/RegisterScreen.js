@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 const ROLES = [
+  { value: 'customer', label: 'Customer' },
   { value: 'staff', label: 'Staff' },
   { value: 'admin', label: 'Admin' },
 ];
@@ -22,13 +23,14 @@ export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('staff');
+  const [role, setRole] = useState('customer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleRegister = async () => {
     setError('');
-    if (!name.trim() || !email.trim() || !password || password.length < 6) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!name.trim() || !normalizedEmail || !password || password.length < 6) {
       setError('Name, email, and password (min 6 characters) are required.');
       return;
     }
@@ -36,7 +38,7 @@ export default function RegisterScreen({ navigation }) {
     try {
       await register({
         name: name.trim(),
-        email: email.trim(),
+        email: normalizedEmail,
         password,
         role,
       });
@@ -54,7 +56,7 @@ export default function RegisterScreen({ navigation }) {
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Create account</Text>
-        <Text style={styles.subtitle}>Staff or admin can add and edit rooms.</Text>
+        <Text style={styles.subtitle}>Create a customer or admin account.</Text>
 
         {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
 

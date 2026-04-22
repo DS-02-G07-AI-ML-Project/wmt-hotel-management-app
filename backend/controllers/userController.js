@@ -16,14 +16,16 @@ const sendTokenResponse = (user, statusCode, res) => {
 // @access  Public
 exports.register = async (req, res, next) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, phone } = req.body;
+        const normalizedEmail = String(email || '').trim().toLowerCase();
 
         // Create user
         const user = await User.create({
             name,
-            email,
+            email: normalizedEmail,
             password,
-            role,
+            role: role || 'customer',
+            phone: phone || '',
         });
 
         sendTokenResponse(user, 201, res);
@@ -39,15 +41,16 @@ exports.register = async (req, res, next) => {
 exports.login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
+        const normalizedEmail = String(email || '').trim().toLowerCase();
 
         // Validate email & password
-        if (!email || !password) {
+        if (!normalizedEmail || !password) {
             res.status(400);
             return next(new Error('Please provide an email and password'));
         }
 
         // Check for user
-        const user = await User.findOne({ email }).select('+password');
+        const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
         if (!user) {
             res.status(401);
@@ -80,6 +83,81 @@ exports.getMe = async (req, res, next) => {
             success: true,
             data: user,
         });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Get all users
+// @route   GET /api/users
+// @access  Private (Admin)
+exports.getUsers = async (req, res, next) => {
+    try {
+        const users = await User.find();
+        res.status(200).json({
+            success: true,
+            count: users.length,
+            data: users,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Get single user
+// @route   GET /api/users/:id
+// @access  Private (Admin)
+exports.getUser = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            res.status(404);
+            throw new Error(`User not found with id of ${req.params.id}`);
+        }
+        res.status(200).json({ success: true, data: user });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Update user
+// @route   PUT /api/users/:id
+// @access  Private (Admin)
+exports.updateUser = async (req, res, next) => {
+    try {
+        const payload = { ...req.body };
+        delete payload.password;
+
+        let user = await User.findById(req.params.id);
+        if (!user) {
+            res.status(404);
+            throw new Error(`User not found with id of ${req.params.id}`);
+        }
+
+        user = await User.findByIdAndUpdate(req.params.id, payload, {
+            new: true,
+            runValidators: true,
+        });
+
+        res.status(200).json({ success: true, data: user });
+    } catch (err) {
+        res.status(400);
+        next(err);
+    }
+};
+
+// @desc    Delete user
+// @route   DELETE /api/users/:id
+// @access  Private (Admin)
+exports.deleteUser = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            res.status(404);
+            throw new Error(`User not found with id of ${req.params.id}`);
+        }
+        await user.deleteOne();
+        res.status(200).json({ success: true, data: {} });
     } catch (err) {
         next(err);
     }

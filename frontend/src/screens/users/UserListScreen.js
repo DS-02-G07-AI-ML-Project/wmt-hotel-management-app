@@ -4,23 +4,24 @@ import { useFocusEffect } from '@react-navigation/native';
 import { requestWithFallback } from '../../config/api';
 import { useListScreenHeader } from '../../hooks/useListScreenHeader';
 
-export default function ComplaintListScreen({ navigation }) {
+export default function UserListScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  useListScreenHeader(navigation, { addRoute: 'ComplaintForm', addLabel: '＋ Add' });
+
+  useListScreenHeader(navigation, { addRoute: 'UserForm', addLabel: '+ Add' });
 
   const load = useCallback(async () => {
     try {
       setError(null);
       setLoading(true);
-      const res = await requestWithFallback('/api/complaints');
+      const res = await requestWithFallback('/api/users');
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
       if (json.success) setItems(json.data || []);
-      else setError('Failed');
+      else setError('Failed to load users');
     } catch (e) {
-      setError(e.message);
+      setError(e.message || 'Error');
     } finally {
       setLoading(false);
     }
@@ -39,6 +40,7 @@ export default function ComplaintListScreen({ navigation }) {
       </View>
     );
   }
+
   if (error) {
     return (
       <View style={styles.center}>
@@ -57,20 +59,13 @@ export default function ComplaintListScreen({ navigation }) {
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate('ComplaintDetail', { id: item._id })}
-          >
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.sub}>
-              {item.category} · {item.priority} · {item.status}
-            </Text>
-            <Text style={styles.meta} numberOfLines={2}>
-              {item.description}
-            </Text>
+          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('UserDetail', { id: item._id })}>
+            <Text style={styles.title}>{item.name}</Text>
+            <Text style={styles.sub}>{item.email}</Text>
+            <Text style={styles.meta}>Role: {item.role}</Text>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>No complaints.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>No users.</Text>}
       />
     </View>
   );

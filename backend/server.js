@@ -8,10 +8,9 @@ const errorHandler = require('./middleware/errorMiddleware');
 const roomRoutes = require('./routes/roomRoutes');
 const userRoutes = require('./routes/userRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
-const staffRoutes = require('./routes/staffRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
-const complaintRoutes = require('./routes/complaintRoutes');
-const visitorRoutes = require('./routes/visitorRoutes');
+const experienceRoutes = require('./routes/experienceRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 // Load env vars
 dotenv.config();
@@ -34,10 +33,9 @@ app.use('/uploads', express.static('uploads')); // For Multer uploaded files
 app.use('/api/rooms', roomRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/bookings', bookingRoutes);
-app.use('/api/staff', staffRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/complaints', complaintRoutes);
-app.use('/api/visitors', visitorRoutes);
+app.use('/api/experiences', experienceRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Default route
 app.get('/', (req, res) => {

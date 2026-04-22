@@ -1,5 +1,4 @@
 const dotenv = require('dotenv');
-const http = require('http');
 const net = require('net');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -17,9 +16,7 @@ function assert(condition, message) {
 
 function buildSmokeMongoUri(uri, dbName) {
   const match = String(uri).match(/^(mongodb(?:\+srv)?:\/\/[^/]+)(\/[^?]*)?(\?.*)?$/);
-  if (!match) {
-    throw new Error('Invalid MONGO_URI format.');
-  }
+  if (!match) throw new Error('Invalid MONGO_URI format.');
 
   const prefix = match[1];
   const query = match[3] || '';
@@ -120,10 +117,15 @@ async function runCrudSuite(baseUrl) {
 
   const adminEmail = `${runId}@example.com`;
   const adminPassword = 'SmokePass123!';
-  let adminToken;
+  const customerEmail = `customer-${runId}@example.com`;
+  const customerPassword = 'CustomerPass123!';
 
+  let adminToken;
+  let customerToken;
+  let customerId;
   let roomId;
   let bookingId;
+  let experienceId;
 
   await withStep(results, 'auth.register_admin', async () => {
     const res = await requestJson(baseUrl, '/api/users/register', {
@@ -140,6 +142,56 @@ async function runCrudSuite(baseUrl) {
     assert(res.json && res.json.success === true, 'Register response not successful.');
     assert(typeof res.json.token === 'string' && res.json.token.length > 20, 'Missing auth token on register.');
     adminToken = res.json.token;
+  });
+
+  await withStep(results, 'users.crud', async () => {
+    const createRes = await requestJson(baseUrl, '/api/users/register', {
+      method: 'POST',
+      expectedStatus: 201,
+      body: {
+        name: 'Smoke Customer',
+        email: customerEmail,
+        password: customerPassword,
+        role: 'customer',
+        phone: '555100200',
+      },
+    });
+
+    customerToken = createRes.json?.token;
+
+    const loginRes = await requestJson(baseUrl, '/api/users/login', {
+      method: 'POST',
+      expectedStatus: 200,
+      body: {
+        email: customerEmail,
+        password: customerPassword,
+      },
+    });
+    assert(loginRes.json?.token, 'Customer login failed.');
+
+    const meRes = await requestJson(baseUrl, '/api/users/me', {
+      token: loginRes.json.token,
+      expectedStatus: 200,
+    });
+
+    customerId = meRes.json?.data?._id;
+    assert(customerId, 'Missing customer id from /me response.');
+
+    const listRes = await requestJson(baseUrl, '/api/users', {
+      token: adminToken,
+      expectedStatus: 200,
+    });
+    assert(Array.isArray(listRes.json?.data), 'User list data is not an array.');
+    assert(listRes.json.data.some((x) => x._id === customerId), 'Created customer missing from user list.');
+
+    const updateRes = await requestJson(baseUrl, `/api/users/${customerId}`, {
+      method: 'PUT',
+      token: adminToken,
+      expectedStatus: 200,
+      body: { phone: '555777999' },
+    });
+
+    assert(updateRes.json?.data?.phone === '555777999', 'User update did not persist phone.');
   });
 
   await withStep(results, 'rooms.crud', async () => {
@@ -180,11 +232,10 @@ async function runCrudSuite(baseUrl) {
   await withStep(results, 'bookings.crud', async () => {
     const createRes = await requestJson(baseUrl, '/api/bookings', {
       method: 'POST',
-      token: adminToken,
+      token: customerToken,
       expectedStatus: 201,
       body: {
-        guestName: 'Smoke Guest',
-        guestEmail: 'guest@example.com',
+        user: customerId,
         room: roomId,
         checkIn: new Date().toISOString(),
         checkOut: new Date(Date.now() + 86400000).toISOString(),
@@ -204,7 +255,7 @@ async function runCrudSuite(baseUrl) {
 
     const updateRes = await requestJson(baseUrl, `/api/bookings/${bookingId}`, {
       method: 'PUT',
-      token: adminToken,
+      token: customerToken,
       expectedStatus: 200,
       body: { status: 'confirmed', notes: 'Updated by smoke test' },
     });
@@ -212,49 +263,10 @@ async function runCrudSuite(baseUrl) {
     assert(updateRes.json?.data?.status === 'confirmed', 'Booking update did not persist status.');
   });
 
-  await withStep(results, 'staff.crud', async () => {
-    const createRes = await requestJson(baseUrl, '/api/staff', {
-      method: 'POST',
-      token: adminToken,
-      expectedStatus: 201,
-      body: {
-        name: 'Smoke Staff',
-        email: `staff-${runId}@example.com`,
-        position: 'Receptionist',
-        department: 'Front Office',
-      },
-    });
-
-    const staffId = createRes.json?.data?._id;
-    assert(staffId, 'Staff create did not return _id.');
-
-    const listRes = await requestJson(baseUrl, '/api/staff', { expectedStatus: 200 });
-    assert(Array.isArray(listRes.json?.data), 'Staff list data is not an array.');
-    assert(listRes.json.data.some((x) => x._id === staffId), 'Created staff missing from list.');
-
-    await requestJson(baseUrl, `/api/staff/${staffId}`, { expectedStatus: 200 });
-
-    const updateRes = await requestJson(baseUrl, `/api/staff/${staffId}`, {
-      method: 'PUT',
-      token: adminToken,
-      expectedStatus: 200,
-      body: { status: 'On Leave' },
-    });
-    assert(updateRes.json?.data?.status === 'On Leave', 'Staff update did not persist status.');
-
-    await requestJson(baseUrl, `/api/staff/${staffId}`, {
-      method: 'DELETE',
-      token: adminToken,
-      expectedStatus: 200,
-    });
-
-    await requestJson(baseUrl, `/api/staff/${staffId}`, { expectedStatus: 404 });
-  });
-
   await withStep(results, 'payments.crud', async () => {
     const createRes = await requestJson(baseUrl, '/api/payments', {
       method: 'POST',
-      token: adminToken,
+      token: customerToken,
       expectedStatus: 201,
       body: {
         amount: 120,
@@ -275,7 +287,7 @@ async function runCrudSuite(baseUrl) {
 
     const updateRes = await requestJson(baseUrl, `/api/payments/${paymentId}`, {
       method: 'PUT',
-      token: adminToken,
+      token: customerToken,
       expectedStatus: 200,
       body: { status: 'Completed', reference: runId },
     });
@@ -284,101 +296,107 @@ async function runCrudSuite(baseUrl) {
 
     await requestJson(baseUrl, `/api/payments/${paymentId}`, {
       method: 'DELETE',
-      token: adminToken,
+      token: customerToken,
       expectedStatus: 200,
     });
 
     await requestJson(baseUrl, `/api/payments/${paymentId}`, { expectedStatus: 404 });
   });
 
-  await withStep(results, 'complaints.crud', async () => {
-    const createRes = await requestJson(baseUrl, '/api/complaints', {
+  await withStep(results, 'experiences.crud', async () => {
+    const createRes = await requestJson(baseUrl, '/api/experiences', {
       method: 'POST',
       token: adminToken,
       expectedStatus: 201,
       body: {
-        title: 'AC issue',
-        description: 'Room AC not cooling well',
-        category: 'Maintenance',
-        priority: 'High',
-        room: roomId,
+        title: 'Sunrise Mountain Hike',
+        description: 'Guided hike with breakfast.',
+        category: 'Hiking',
+        price: 60,
+        durationHours: 4,
+        capacity: 10,
+        scheduleDate: new Date(Date.now() + 172800000).toISOString(),
+        status: 'Available',
       },
     });
 
-    const complaintId = createRes.json?.data?._id;
-    assert(complaintId, 'Complaint create did not return _id.');
+    experienceId = createRes.json?.data?._id;
+    assert(experienceId, 'Experience create did not return _id.');
 
-    const listRes = await requestJson(baseUrl, '/api/complaints', { expectedStatus: 200 });
-    assert(Array.isArray(listRes.json?.data), 'Complaint list data is not an array.');
-    assert(listRes.json.data.some((x) => x._id === complaintId), 'Created complaint missing from list.');
+    const listRes = await requestJson(baseUrl, '/api/experiences', { expectedStatus: 200 });
+    assert(Array.isArray(listRes.json?.data), 'Experience list data is not an array.');
+    assert(listRes.json.data.some((x) => x._id === experienceId), 'Created experience missing from list.');
 
-    await requestJson(baseUrl, `/api/complaints/${complaintId}`, { expectedStatus: 200 });
+    await requestJson(baseUrl, `/api/experiences/${experienceId}`, { expectedStatus: 200 });
 
-    const updateRes = await requestJson(baseUrl, `/api/complaints/${complaintId}`, {
+    const updateRes = await requestJson(baseUrl, `/api/experiences/${experienceId}`, {
       method: 'PUT',
       token: adminToken,
       expectedStatus: 200,
-      body: { status: 'Resolved' },
+      body: { status: 'Sold Out' },
     });
 
-    assert(updateRes.json?.data?.status === 'Resolved', 'Complaint update did not persist status.');
-
-    await requestJson(baseUrl, `/api/complaints/${complaintId}`, {
-      method: 'DELETE',
-      token: adminToken,
-      expectedStatus: 200,
-    });
-
-    await requestJson(baseUrl, `/api/complaints/${complaintId}`, { expectedStatus: 404 });
+    assert(updateRes.json?.data?.status === 'Sold Out', 'Experience update did not persist status.');
   });
 
-  await withStep(results, 'visitors.crud', async () => {
-    const createRes = await requestJson(baseUrl, '/api/visitors', {
+  await withStep(results, 'reviews.crud', async () => {
+    const createRes = await requestJson(baseUrl, '/api/reviews', {
       method: 'POST',
-      token: adminToken,
+      token: customerToken,
       expectedStatus: 201,
       body: {
-        fullName: 'Smoke Visitor',
-        idNumber: `NIC-${Date.now()}`,
-        purpose: 'Meeting',
-        hostName: 'Smoke Admin',
+        user: customerId,
+        room: roomId,
+        experience: experienceId,
+        rating: 5,
+        comment: 'Great stay and excellent hiking activity.',
+        status: 'Visible',
       },
     });
 
-    const visitorId = createRes.json?.data?._id;
-    assert(visitorId, 'Visitor create did not return _id.');
+    const reviewId = createRes.json?.data?._id;
+    assert(reviewId, 'Review create did not return _id.');
 
-    const listRes = await requestJson(baseUrl, '/api/visitors', { expectedStatus: 200 });
-    assert(Array.isArray(listRes.json?.data), 'Visitor list data is not an array.');
-    assert(listRes.json.data.some((x) => x._id === visitorId), 'Created visitor missing from list.');
+    const listRes = await requestJson(baseUrl, '/api/reviews', { expectedStatus: 200 });
+    assert(Array.isArray(listRes.json?.data), 'Review list data is not an array.');
+    assert(listRes.json.data.some((x) => x._id === reviewId), 'Created review missing from list.');
 
-    await requestJson(baseUrl, `/api/visitors/${visitorId}`, { expectedStatus: 200 });
+    await requestJson(baseUrl, `/api/reviews/${reviewId}`, { expectedStatus: 200 });
 
-    const updateRes = await requestJson(baseUrl, `/api/visitors/${visitorId}`, {
+    const updateRes = await requestJson(baseUrl, `/api/reviews/${reviewId}`, {
       method: 'PUT',
-      token: adminToken,
+      token: customerToken,
       expectedStatus: 200,
-      body: { status: 'Checked Out' },
+      body: { rating: 4, comment: 'Still great, but room service can improve.' },
     });
 
-    assert(updateRes.json?.data?.status === 'Checked Out', 'Visitor update did not persist status.');
+    assert(updateRes.json?.data?.rating === 4, 'Review update did not persist rating.');
 
-    await requestJson(baseUrl, `/api/visitors/${visitorId}`, {
+    await requestJson(baseUrl, `/api/reviews/${reviewId}`, {
       method: 'DELETE',
       token: adminToken,
       expectedStatus: 200,
     });
 
-    await requestJson(baseUrl, `/api/visitors/${visitorId}`, { expectedStatus: 404 });
+    await requestJson(baseUrl, `/api/reviews/${reviewId}`, { expectedStatus: 404 });
   });
 
   await withStep(results, 'bookings.delete', async () => {
     await requestJson(baseUrl, `/api/bookings/${bookingId}`, {
       method: 'DELETE',
-      token: adminToken,
+      token: customerToken,
       expectedStatus: 200,
     });
     await requestJson(baseUrl, `/api/bookings/${bookingId}`, { expectedStatus: 404 });
+  });
+
+  await withStep(results, 'experiences.delete', async () => {
+    await requestJson(baseUrl, `/api/experiences/${experienceId}`, {
+      method: 'DELETE',
+      token: adminToken,
+      expectedStatus: 200,
+    });
+    await requestJson(baseUrl, `/api/experiences/${experienceId}`, { expectedStatus: 404 });
   });
 
   await withStep(results, 'rooms.delete', async () => {
@@ -388,6 +406,15 @@ async function runCrudSuite(baseUrl) {
       expectedStatus: 200,
     });
     await requestJson(baseUrl, `/api/rooms/${roomId}`, { expectedStatus: 404 });
+  });
+
+  await withStep(results, 'users.delete', async () => {
+    await requestJson(baseUrl, `/api/users/${customerId}`, {
+      method: 'DELETE',
+      token: adminToken,
+      expectedStatus: 200,
+    });
+    await requestJson(baseUrl, `/api/users/${customerId}`, { token: adminToken, expectedStatus: 404 });
   });
 
   return results;
@@ -439,7 +466,7 @@ async function main() {
     await cleanupDatabase(smokeMongoUri).catch(() => null);
   }
 
-  console.log('CRUD integration test passed for all 6 core modules.');
+  console.log('CRUD integration test passed for 6 modules: users, rooms, bookings, payments, experiences, reviews.');
   for (const result of results) {
     console.log(`- ${result.name}: PASS`);
   }
