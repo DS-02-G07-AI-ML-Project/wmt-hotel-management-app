@@ -10,10 +10,13 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.route('/').get(getBookings).post(protect, authorize('admin', 'customer'), createBooking);
+router
+  .route('/')
+  .get(protect, authorize('admin', 'customer'), getBookings)
+  .post(protect, authorize('admin', 'customer'), createBooking);
 router
   .route('/:id')
-  .get(getBooking)
+  .get(protect, authorize('admin', 'customer'), getBooking)
   .put(protect, authorize('admin', 'customer'), updateBooking)
   .delete(protect, authorize('admin', 'customer'), deleteBooking);
 

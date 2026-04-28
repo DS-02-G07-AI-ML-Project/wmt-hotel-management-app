@@ -152,6 +152,9 @@ PORT=10000
 MONGO_URI=<your-mongodb-atlas-uri>
 JWT_SECRET=<strong-random-secret>
 PUBLIC_API_URL=https://<your-render-service>.onrender.com
+CORS_ORIGIN=https://<your-frontend-origin>
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=500
 ```
 
 > Render sets `PORT` automatically; keeping `PORT=10000` optional in many setups.
@@ -186,9 +189,11 @@ For final demo, ensure app works **without** local backend running.
 - `POST /api/users/login` → returns JWT
 - `GET /api/users/me` → requires `Authorization: Bearer <token>`
 
-Role restrictions:
-- `admin` and `staff`: can create/update rooms
-- `admin` only: can delete rooms
+Security model:
+- Public registration always creates `customer` users.
+- Admin user creation is handled via protected `POST /api/users`.
+- `admin` can manage all records.
+- `customer` can only view/update/delete their own bookings, payments, and reviews.
 
 ---
 
@@ -205,14 +210,20 @@ http://<your-ip>:5000
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | GET | `/` | Public | API health check |
+| GET | `/health` | Public | JSON health status for monitoring |
 
 ### Users
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/api/users/register` | Public | Register and get JWT |
+| POST | `/api/users/register` | Public | Register customer and get JWT |
 | POST | `/api/users/login` | Public | Login and get JWT |
 | GET | `/api/users/me` | Private | Get current user |
+| POST | `/api/users` | Private (`admin`) | Create user with role |
+| GET | `/api/users` | Private (`admin`) | List users |
+| GET | `/api/users/:id` | Private (`admin`) | Get user by id |
+| PUT | `/api/users/:id` | Private (`admin`) | Update user |
+| DELETE | `/api/users/:id` | Private (`admin`) | Delete user |
 
 ### Rooms
 
@@ -220,9 +231,28 @@ http://<your-ip>:5000
 |---|---|---|---|
 | GET | `/api/rooms` | Public | List all rooms |
 | GET | `/api/rooms/:id` | Public | Get room by ID |
-| POST | `/api/rooms` | Private (`admin`,`staff`) | Create room (supports photos upload) |
-| PUT | `/api/rooms/:id` | Private (`admin`,`staff`) | Update room |
+| POST | `/api/rooms` | Private (`admin`) | Create room (supports photos upload) |
+| PUT | `/api/rooms/:id` | Private (`admin`) | Update room |
 | DELETE | `/api/rooms/:id` | Private (`admin`) | Delete room |
+
+### Bookings, Payments, Experiences, Reviews
+
+All 4 modules expose full CRUD routes under:
+- `/api/bookings`
+- `/api/payments`
+- `/api/experiences`
+- `/api/reviews`
+
+Role behavior:
+- `admin` can perform full CRUD across all records.
+- `customer` can perform CRUD only for their own bookings/payments/reviews.
+- Experiences remain admin-managed.
+
+---
+
+## 👥 Core 6 Component Use Cases
+
+See the full role-based use-case guide in [USE_CASES.md](USE_CASES.md).
 
 ---
 
@@ -283,10 +313,10 @@ npm run test:crud
 Runs live API CRUD checks against an isolated temporary MongoDB database for:
 - Rooms
 - Bookings
-- Staff
+- Users
 - Payments
-- Complaints
-- Visitors
+- Experiences
+- Reviews
 
 ### Frontend smoke test
 
@@ -299,6 +329,44 @@ Validates:
 - required app/config files exist
 - `.env.example` includes expected Expo API keys
 - Expo can export an Android bundle (`expo export --platform android`)
+
+---
+
+## 🐳 Docker (Optional)
+
+Run backend + MongoDB locally in production mode:
+
+```bash
+docker compose up --build
+```
+
+Files included:
+- `backend/Dockerfile`
+- `backend/.dockerignore`
+- `docker-compose.yml`
+
+---
+
+## 🌱 Sample Data
+
+Load linked sample records for all 6 core components:
+
+```bash
+cd backend
+npm run seed
+```
+
+This seeds:
+- 3 users
+- 3 rooms
+- 3 bookings
+- 3 payments
+- 3 experiences
+- 3 reviews
+
+Default demo accounts:
+- Admin: `admin@wmt.com` / `AdminPass123!`
+- Customer: `customer@wmt.com` / `CustomerPass123!`
 
 ---
 

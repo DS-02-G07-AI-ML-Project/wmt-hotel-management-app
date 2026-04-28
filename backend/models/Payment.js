@@ -14,6 +14,7 @@ const paymentSchema = new mongoose.Schema(
       enum: ['Pending', 'Completed', 'Failed', 'Refunded'],
       default: 'Pending',
     },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     reference: { type: String, default: '', trim: true },
     booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: null },
     paidAt: { type: Date, default: Date.now },

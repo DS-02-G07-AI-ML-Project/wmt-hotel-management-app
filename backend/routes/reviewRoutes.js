@@ -10,11 +10,14 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.route('/').get(getReviews).post(protect, authorize('admin', 'customer'), createReview);
+router
+  .route('/')
+  .get(protect, authorize('admin', 'customer'), getReviews)
+  .post(protect, authorize('admin', 'customer'), createReview);
 router
   .route('/:id')
-  .get(getReview)
+  .get(protect, authorize('admin', 'customer'), getReview)
   .put(protect, authorize('admin', 'customer'), updateReview)
-  .delete(protect, authorize('admin'), deleteReview);
+  .delete(protect, authorize('admin', 'customer'), deleteReview);
 
 module.exports = router;

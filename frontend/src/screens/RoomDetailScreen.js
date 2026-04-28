@@ -4,8 +4,10 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { requestWithFallback, getUploadUrl } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 
 const RoomDetailScreen = () => {
+  const { isAdmin } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
   const { roomId } = route.params;
@@ -119,24 +121,37 @@ const RoomDetailScreen = () => {
           <Text style={styles.descriptionText}>{room.description}</Text>
         </View>
 
-        <View style={styles.actionContainer}>
+        <TouchableOpacity
+          style={styles.bookButton}
+          onPress={() => navigation.navigate('BookingsTab', {
+            screen: 'BookingForm',
+            params: { roomId: room._id },
+          })}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.bookButtonText}>Book Room</Text>
+        </TouchableOpacity>
+
+        {isAdmin ? (
+          <View style={styles.actionContainer}>
             <TouchableOpacity 
-                style={styles.editButton} 
-                onPress={() => navigation.navigate('EditRoom', { room })}
-                activeOpacity={0.9}
+              style={styles.editButton} 
+              onPress={() => navigation.navigate('EditRoom', { room })}
+              activeOpacity={0.9}
             >
-                <Text style={styles.editButtonText}>Edit Room</Text>
+              <Text style={styles.editButtonText}>Edit Room</Text>
             </TouchableOpacity>
-            
+              
             <TouchableOpacity 
-                style={styles.deleteButton} 
-                onPress={handleDelete}
-                disabled={deleting}
-                activeOpacity={0.9}
+              style={styles.deleteButton} 
+              onPress={handleDelete}
+              disabled={deleting}
+              activeOpacity={0.9}
             >
-                {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.deleteButtonText}>Delete Room</Text>}
+              {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.deleteButtonText}>Delete Room</Text>}
             </TouchableOpacity>
-        </View>
+          </View>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -254,6 +269,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#475569',
     lineHeight: 22,
+  },
+  bookButton: {
+    marginTop: 4,
+    backgroundColor: '#0f766e',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  bookButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
   },
   errorTitle: {
     color: '#b91c1c',

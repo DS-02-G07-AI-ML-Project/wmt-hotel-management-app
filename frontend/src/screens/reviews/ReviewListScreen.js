@@ -3,8 +3,10 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator }
 import { useFocusEffect } from '@react-navigation/native';
 import { requestWithFallback } from '../../config/api';
 import { useListScreenHeader } from '../../hooks/useListScreenHeader';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ReviewListScreen({ navigation }) {
+  const { isAdmin } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,13 +46,17 @@ export default function ReviewListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.hero}>
+        <Text style={styles.heroTitle}>{isAdmin ? 'Guest Feedback' : 'My Reviews'}</Text>
+        <Text style={styles.heroSub}>{items.length} {isAdmin ? 'reviews captured' : 'reviews'}</Text>
+      </View>
       <FlatList
         data={items}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('ReviewDetail', { id: item._id })}>
-            <Text style={styles.title}>{item.user?.name || 'User'} · {item.rating}/5</Text>
+            <Text style={styles.title}>{item.user?.name || 'User'} | {item.rating}/5</Text>
             <Text style={styles.sub}>{item.status}</Text>
             <Text style={styles.meta} numberOfLines={2}>{item.comment}</Text>
           </TouchableOpacity>
@@ -62,15 +68,28 @@ export default function ReviewListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5fb' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f2f5fb' },
-  list: { padding: 16 },
-  card: { backgroundColor: '#fff', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' },
-  title: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
-  sub: { fontSize: 14, color: '#64748b', marginTop: 4 },
-  meta: { fontSize: 13, color: '#94a3b8', marginTop: 6 },
+  container: { flex: 1, backgroundColor: '#f8f4ee' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f4ee' },
+  hero: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 6,
+    borderRadius: 16,
+    backgroundColor: '#ffe4e6',
+    borderWidth: 1,
+    borderColor: '#fecdd3',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  heroTitle: { fontSize: 18, fontWeight: '800', color: '#9f1239' },
+  heroSub: { marginTop: 4, color: '#be123c', fontWeight: '600' },
+  list: { padding: 16, paddingTop: 8 },
+  card: { backgroundColor: '#fffdf8', padding: 16, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: '#f3e8d7' },
+  title: { fontSize: 17, fontWeight: '700', color: '#1f2937' },
+  sub: { fontSize: 14, color: '#57534e', marginTop: 4 },
+  meta: { fontSize: 13, color: '#0f766e', marginTop: 6, fontWeight: '700' },
   err: { color: '#b91c1c', marginBottom: 12 },
-  retry: { backgroundColor: '#2563eb', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  retry: { backgroundColor: '#0f766e', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
   retryText: { color: '#fff', fontWeight: '600' },
-  empty: { textAlign: 'center', color: '#64748b', marginTop: 40 },
+  empty: { textAlign: 'center', color: '#78716c', marginTop: 40 },
 });

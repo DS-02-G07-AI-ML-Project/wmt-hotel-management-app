@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ReviewDetailScreen({ navigation, route }) {
+  const { currentUser, isAdmin } = useAuth();
   const { id } = route.params;
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,9 @@ export default function ReviewDetailScreen({ navigation, route }) {
   if (loading) return <View style={styles.center}><ActivityIndicator color="#2563eb" size="large" /></View>;
   if (err || !item) return <View style={styles.center}><Text style={styles.err}>{err || 'Not found'}</Text></View>;
 
+  const itemOwnerId = item.user?._id || item.user;
+  const canManage = isAdmin || (currentUser && itemOwnerId && String(currentUser._id) === String(itemOwnerId));
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.h1}>{item.user?.name || 'User'}</Text>
@@ -63,12 +68,16 @@ export default function ReviewDetailScreen({ navigation, route }) {
       <Text style={styles.row}>Experience: {item.experience?.title || '-'}</Text>
       <Text style={styles.body}>{item.comment}</Text>
 
-      <TouchableOpacity style={styles.edit} onPress={() => navigation.navigate('ReviewForm', { id: item._id })}>
-        <Text style={styles.editText}>Edit</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.del} onPress={onDelete} disabled={deleting}>
-        {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.delText}>Delete</Text>}
-      </TouchableOpacity>
+      {canManage ? (
+        <>
+          <TouchableOpacity style={styles.edit} onPress={() => navigation.navigate('ReviewForm', { id: item._id })}>
+            <Text style={styles.editText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.del} onPress={onDelete} disabled={deleting}>
+            {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.delText}>Delete</Text>}
+          </TouchableOpacity>
+        </>
+      ) : null}
     </ScrollView>
   );
 }

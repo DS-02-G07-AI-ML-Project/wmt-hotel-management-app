@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 const STATUSES = ['pending', 'confirmed', 'checked_in', 'cancelled', 'completed'];
 
 export default function BookingFormScreen({ navigation, route }) {
+  const { currentUser, isAdmin } = useAuth();
   const editId = route.params?.id;
+  const selectedRoomId = route.params?.roomId;
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
   const [rooms, setRooms] = useState([]);
@@ -20,20 +23,31 @@ export default function BookingFormScreen({ navigation, route }) {
   const [totalAmount, setTotalAmount] = useState('');
 
   useEffect(() => {
+    if (!editId && selectedRoomId) {
+      setRoomId(selectedRoomId);
+    }
+
+    if (!editId && currentUser && !isAdmin) {
+      setUserId(currentUser._id);
+    }
+  }, [editId, selectedRoomId, currentUser, isAdmin]);
+
+  useEffect(() => {
     (async () => {
       try {
-        const [roomRes, userRes] = await Promise.all([
-          requestWithFallback('/api/rooms'),
-          requestWithFallback('/api/users'),
-        ]);
-        const [roomJson, userJson] = await Promise.all([roomRes.json(), userRes.json()]);
+        const roomRes = await requestWithFallback('/api/rooms');
+        const roomJson = await roomRes.json();
         if (roomJson.success) setRooms(roomJson.data || []);
-        if (userJson.success) setUsers(userJson.data || []);
+        if (isAdmin) {
+          const userRes = await requestWithFallback('/api/users');
+          const userJson = await userRes.json();
+          if (userJson.success) setUsers(userJson.data || []);
+        }
       } catch {
         // ignore
       }
     })();
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (!editId) return;
@@ -43,6 +57,12 @@ export default function BookingFormScreen({ navigation, route }) {
         const json = await res.json();
         if (json.success && json.data) {
           const b = json.data;
+          const ownerId = typeof b.user === 'object' ? b.user._id : b.user;
+          if (!isAdmin && currentUser?._id && String(ownerId) !== String(currentUser._id)) {
+            Alert.alert('Unauthorized', 'You can only edit your own bookings.');
+            navigation.goBack();
+            return;
+          }
           setUserId(typeof b.user === 'object' ? b.user._id : b.user || '');
           setRoomId(typeof b.room === 'object' ? b.room._id : b.room || '');
           setCheckIn(b.checkIn ? String(b.checkIn).slice(0, 10) : '');
@@ -60,13 +80,12 @@ export default function BookingFormScreen({ navigation, route }) {
   }, [editId]);
 
   const submit = async () => {
-    if (!userId || !roomId || !checkIn || !checkOut) {
-      Alert.alert('Validation', 'User, room, check-in and check-out are required.');
+    if ((!isAdmin && !currentUser) || (!isAdmin && !roomId) || !checkIn || !checkOut || (isAdmin && !userId)) {
+      Alert.alert('Validation', isAdmin ? 'User, room, check-in and check-out are required.' : 'Room, check-in and check-out are required.');
       return;
     }
 
     const payload = {
-      user: userId,
       room: roomId,
       checkIn: new Date(checkIn).toISOString(),
       checkOut: new Date(checkOut).toISOString(),
@@ -74,6 +93,12 @@ export default function BookingFormScreen({ navigation, route }) {
       notes: notes.trim(),
       totalAmount: totalAmount ? Number(totalAmount) : 0,
     };
+
+    if (isAdmin) {
+      payload.user = userId;
+    } else if (currentUser?._id) {
+      payload.user = currentUser._id;
+    }
 
     setSaving(true);
     try {
@@ -88,7 +113,7 @@ export default function BookingFormScreen({ navigation, route }) {
         return;
       }
       Alert.alert('Saved', 'Booking saved.');
-      navigation.goBack();
+      navigation.navigate('BookingsTab', { screen: 'BookingList' });
     } catch {
       Alert.alert('Error', 'Network error');
     } finally {
@@ -100,20 +125,30 @@ export default function BookingFormScreen({ navigation, route }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.label}>User ID *</Text>
-      <TextInput style={styles.input} value={userId} onChangeText={setUserId} placeholder="Mongo id" />
-      {users.length > 0 ? (
-        <View style={styles.row}>
-          {users.slice(0, 8).map((u) => (
-            <TouchableOpacity key={u._id} style={styles.chip} onPress={() => setUserId(u._id)}>
-              <Text style={styles.chipText}>{u.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      {isAdmin ? (
+        <>
+          <Text style={styles.label}>User ID *</Text>
+          <TextInput style={styles.input} value={userId} onChangeText={setUserId} placeholder="Mongo id" />
+          {users.length > 0 ? (
+            <View style={styles.row}>
+              {users.slice(0, 8).map((u) => (
+                <TouchableOpacity key={u._id} style={styles.chip} onPress={() => setUserId(u._id)}>
+                  <Text style={styles.chipText}>{u.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+        </>
       ) : null}
 
       <Text style={styles.label}>Room ID *</Text>
-      <TextInput style={styles.input} value={roomId} onChangeText={setRoomId} placeholder="Mongo id" />
+      <TextInput
+        style={styles.input}
+        value={roomId}
+        onChangeText={setRoomId}
+        placeholder="Mongo id"
+        editable={isAdmin || !selectedRoomId}
+      />
       {rooms.length > 0 ? (
         <View style={styles.row}>
           {rooms.slice(0, 8).map((r) => (
@@ -130,17 +165,21 @@ export default function BookingFormScreen({ navigation, route }) {
       <Text style={styles.label}>Check-out * (YYYY-MM-DD)</Text>
       <TextInput style={styles.input} value={checkOut} onChangeText={setCheckOut} placeholder="2026-04-03" />
 
-      <Text style={styles.label}>Status</Text>
-      <View style={styles.row}>
-        {STATUSES.map((s) => (
-          <TouchableOpacity key={s} style={[styles.chip, status === s && styles.chipOn]} onPress={() => setStatus(s)}>
-            <Text style={[styles.chipText, status === s && styles.chipTextOn]}>{s}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {isAdmin ? (
+        <>
+          <Text style={styles.label}>Status</Text>
+          <View style={styles.row}>
+            {STATUSES.map((s) => (
+              <TouchableOpacity key={s} style={[styles.chip, status === s && styles.chipOn]} onPress={() => setStatus(s)}>
+                <Text style={[styles.chipText, status === s && styles.chipTextOn]}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      <Text style={styles.label}>Total amount</Text>
-      <TextInput style={styles.input} value={totalAmount} onChangeText={setTotalAmount} keyboardType="decimal-pad" />
+          <Text style={styles.label}>Total amount</Text>
+          <TextInput style={styles.input} value={totalAmount} onChangeText={setTotalAmount} keyboardType="decimal-pad" />
+        </>
+      ) : null}
 
       <Text style={styles.label}>Notes</Text>
       <TextInput style={[styles.input, styles.tall]} value={notes} onChangeText={setNotes} multiline />

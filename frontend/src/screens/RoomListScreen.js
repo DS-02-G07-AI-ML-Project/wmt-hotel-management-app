@@ -11,8 +11,10 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { requestWithFallback, getUploadUrl } from '../config/api';
 import { useListScreenHeader } from '../hooks/useListScreenHeader';
+import { useAuth } from '../context/AuthContext';
 
 const RoomListScreen = ({ navigation }) => {
+  const { isAdmin } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,8 +52,8 @@ const RoomListScreen = ({ navigation }) => {
 
   useListScreenHeader(navigation, {
     showSignOut: true,
-    addRoute: 'AddRoom',
-    addLabel: '＋ Add Room',
+    addRoute: isAdmin ? 'AddRoom' : null,
+    addLabel: '+ Add Room',
   });
 
   const renderRoomItem = ({ item }) => {

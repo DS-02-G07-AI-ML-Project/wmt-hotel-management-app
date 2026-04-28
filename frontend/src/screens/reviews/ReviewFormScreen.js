@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 const STATUSES = ['Visible', 'Hidden'];
 
 export default function ReviewFormScreen({ navigation, route }) {
+  const { currentUser, isAdmin } = useAuth();
   const editId = route.params?.id;
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
@@ -23,20 +25,29 @@ export default function ReviewFormScreen({ navigation, route }) {
   useEffect(() => {
     (async () => {
       try {
-        const [uRes, rRes, xRes] = await Promise.all([
-          requestWithFallback('/api/users'),
+        const [rRes, xRes] = await Promise.all([
           requestWithFallback('/api/rooms'),
           requestWithFallback('/api/experiences'),
         ]);
-        const [uJson, rJson, xJson] = await Promise.all([uRes.json(), rRes.json(), xRes.json()]);
-        if (uJson.success) setUsers(uJson.data || []);
+        const [rJson, xJson] = await Promise.all([rRes.json(), xRes.json()]);
         if (rJson.success) setRooms(rJson.data || []);
         if (xJson.success) setExperiences(xJson.data || []);
+        if (isAdmin) {
+          const uRes = await requestWithFallback('/api/users');
+          const uJson = await uRes.json();
+          if (uJson.success) setUsers(uJson.data || []);
+        }
       } catch {
         // ignore
       }
     })();
-  }, []);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!editId && currentUser && !isAdmin) {
+      setUserId(currentUser._id);
+    }
+  }, [editId, currentUser, isAdmin]);
 
   useEffect(() => {
     if (!editId) return;
@@ -46,6 +57,12 @@ export default function ReviewFormScreen({ navigation, route }) {
         const json = await res.json();
         if (json.success && json.data) {
           const v = json.data;
+          const ownerId = typeof v.user === 'object' ? v.user._id : v.user;
+          if (!isAdmin && currentUser?._id && String(ownerId) !== String(currentUser._id)) {
+            Alert.alert('Unauthorized', 'You can only edit your own reviews.');
+            navigation.goBack();
+            return;
+          }
           setUserId(v.user && typeof v.user === 'object' ? v.user._id : v.user || '');
           setRoomId(v.room && typeof v.room === 'object' ? v.room._id : v.room || '');
           setExperienceId(v.experience && typeof v.experience === 'object' ? v.experience._id : v.experience || '');
@@ -62,19 +79,23 @@ export default function ReviewFormScreen({ navigation, route }) {
   }, [editId]);
 
   const submit = async () => {
-    if (!userId.trim() || !comment.trim()) {
-      Alert.alert('Validation', 'User and comment are required.');
+    if ((!isAdmin && !currentUser) || (!isAdmin && !comment.trim()) || (isAdmin && !userId.trim()) || !comment.trim()) {
+      Alert.alert('Validation', isAdmin ? 'User and comment are required.' : 'Comment is required.');
       return;
     }
 
     const payload = {
-      user: userId.trim(),
+      user: isAdmin ? userId.trim() : currentUser?._id,
       room: roomId.trim() || null,
       experience: experienceId.trim() || null,
       rating: Number(rating),
       comment: comment.trim(),
       status,
     };
+
+    if (!isAdmin && currentUser?._id) {
+      payload.user = currentUser._id;
+    }
 
     setSaving(true);
     try {
@@ -101,16 +122,20 @@ export default function ReviewFormScreen({ navigation, route }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.label}>User ID *</Text>
-      <TextInput style={styles.input} value={userId} onChangeText={setUserId} placeholder="Mongo id" />
-      {users.length > 0 ? (
-        <View style={styles.row}>
-          {users.slice(0, 6).map((u) => (
-            <TouchableOpacity key={u._id} style={styles.chip} onPress={() => setUserId(u._id)}>
-              <Text style={styles.chipText}>{u.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      {isAdmin ? (
+        <>
+          <Text style={styles.label}>User ID *</Text>
+          <TextInput style={styles.input} value={userId} onChangeText={setUserId} placeholder="Mongo id" />
+          {users.length > 0 ? (
+            <View style={styles.row}>
+              {users.slice(0, 6).map((u) => (
+                <TouchableOpacity key={u._id} style={styles.chip} onPress={() => setUserId(u._id)}>
+                  <Text style={styles.chipText}>{u.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+        </>
       ) : null}
 
       <Text style={styles.label}>Room ID (optional)</Text>
@@ -143,14 +168,18 @@ export default function ReviewFormScreen({ navigation, route }) {
       <Text style={styles.label}>Comment *</Text>
       <TextInput style={[styles.input, styles.tall]} value={comment} onChangeText={setComment} multiline />
 
-      <Text style={styles.label}>Status</Text>
-      <View style={styles.row}>
-        {STATUSES.map((s) => (
-          <TouchableOpacity key={s} style={[styles.chip, status === s && styles.chipOn]} onPress={() => setStatus(s)}>
-            <Text style={[styles.chipText, status === s && styles.chipTextOn]}>{s}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {isAdmin ? (
+        <>
+          <Text style={styles.label}>Status</Text>
+          <View style={styles.row}>
+            {STATUSES.map((s) => (
+              <TouchableOpacity key={s} style={[styles.chip, status === s && styles.chipOn]} onPress={() => setStatus(s)}>
+                <Text style={[styles.chipText, status === s && styles.chipTextOn]}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      ) : null}
 
       <TouchableOpacity style={styles.save} onPress={submit} disabled={saving}>
         {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save</Text>}

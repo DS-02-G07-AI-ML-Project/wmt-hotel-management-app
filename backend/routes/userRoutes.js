@@ -3,6 +3,7 @@ const {
   register,
   login,
   getMe,
+  createUser,
   getUsers,
   getUser,
   updateUser,
@@ -16,7 +17,7 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 router.post('/register', register);
 router.post('/login', login);
 router.get('/me', protect, getMe);
-router.route('/').get(protect, authorize('admin'), getUsers);
+router.route('/').get(protect, authorize('admin'), getUsers).post(protect, authorize('admin'), createUser);
 router
   .route('/:id')
   .get(protect, authorize('admin'), getUser)

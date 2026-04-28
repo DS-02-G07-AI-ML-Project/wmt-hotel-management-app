@@ -12,18 +12,11 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
-const ROLES = [
-  { value: 'customer', label: 'Customer' },
-  { value: 'staff', label: 'Staff' },
-  { value: 'admin', label: 'Admin' },
-];
-
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('customer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -40,7 +33,6 @@ export default function RegisterScreen({ navigation }) {
         name: name.trim(),
         email: normalizedEmail,
         password,
-        role,
       });
     } catch (e) {
       setError(e.message || 'Registration failed');
@@ -56,7 +48,7 @@ export default function RegisterScreen({ navigation }) {
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Create account</Text>
-        <Text style={styles.subtitle}>Create a customer or admin account.</Text>
+        <Text style={styles.subtitle}>Create your customer account.</Text>
 
         {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
 
@@ -89,21 +81,6 @@ export default function RegisterScreen({ navigation }) {
           placeholder="At least 6 characters"
           placeholderTextColor="#94a3b8"
         />
-
-        <Text style={styles.label}>Role</Text>
-        <View style={styles.roleRow}>
-          {ROLES.map((r) => (
-            <TouchableOpacity
-              key={r.value}
-              style={[styles.roleChip, role === r.value && styles.roleChipActive]}
-              onPress={() => setRole(r.value)}
-            >
-              <Text style={[styles.roleChipText, role === r.value && styles.roleChipTextActive]}>
-                {r.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
 
         <TouchableOpacity
           style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
@@ -173,21 +150,6 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     marginBottom: 14,
   },
-  roleRow: { flexDirection: 'row', gap: 10, marginBottom: 20, flexWrap: 'wrap' },
-  roleChip: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#fff',
-  },
-  roleChipActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
-  },
-  roleChipText: { color: '#475569', fontWeight: '600' },
-  roleChipTextActive: { color: '#fff' },
   primaryBtn: {
     backgroundColor: '#2563eb',
     paddingVertical: 14,

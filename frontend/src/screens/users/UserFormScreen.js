@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 const ROLES = ['customer', 'admin'];
 
 export default function UserFormScreen({ navigation, route }) {
+  const { isAdmin } = useAuth();
   const editId = route.params?.id;
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
@@ -59,11 +61,10 @@ export default function UserFormScreen({ navigation, route }) {
 
     setSaving(true);
     try {
-      const res = await requestWithFallback(editId ? `/api/users/${editId}` : '/api/users/register', {
+      const res = await requestWithFallback(editId ? `/api/users/${editId}` : '/api/users', {
         method: editId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editId ? updatePayload : createPayload),
-        skipAuth: !editId,
       });
       const json = await res.json();
       if (!res.ok) {
@@ -99,14 +100,18 @@ export default function UserFormScreen({ navigation, route }) {
       <Text style={styles.label}>Phone</Text>
       <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
 
-      <Text style={styles.label}>Role</Text>
-      <View style={styles.row}>
-        {ROLES.map((r) => (
-          <TouchableOpacity key={r} style={[styles.chip, role === r && styles.chipOn]} onPress={() => setRole(r)}>
-            <Text style={[styles.chipText, role === r && styles.chipTextOn]}>{r}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {isAdmin ? (
+        <>
+          <Text style={styles.label}>Role</Text>
+          <View style={styles.row}>
+            {ROLES.map((r) => (
+              <TouchableOpacity key={r} style={[styles.chip, role === r && styles.chipOn]} onPress={() => setRole(r)}>
+                <Text style={[styles.chipText, role === r && styles.chipTextOn]}>{r}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      ) : null}
 
       <TouchableOpacity style={styles.save} onPress={submit} disabled={saving}>
         {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save</Text>}

@@ -28,6 +28,7 @@ import ExperienceFormScreen from '../screens/experiences/ExperienceFormScreen';
 import ReviewListScreen from '../screens/reviews/ReviewListScreen';
 import ReviewDetailScreen from '../screens/reviews/ReviewDetailScreen';
 import ReviewFormScreen from '../screens/reviews/ReviewFormScreen';
+import { useAuth } from '../context/AuthContext';
 
 const Tab = createBottomTabNavigator();
 const RoomStack = createStackNavigator();
@@ -37,13 +38,13 @@ const PaymentStack = createStackNavigator();
 const ExperienceStack = createStackNavigator();
 const ReviewStack = createStackNavigator();
 
-function RoomStackScreen() {
+function RoomStackScreen({ isAdmin }) {
   return (
     <RoomStack.Navigator initialRouteName="Rooms" screenOptions={stackOptions}>
       <RoomStack.Screen name="Rooms" component={RoomListScreen} options={{ title: 'Rooms' }} />
-      <RoomStack.Screen name="AddRoom" component={AddRoomScreen} options={{ title: 'Add Room' }} />
       <RoomStack.Screen name="RoomDetail" component={RoomDetailScreen} options={{ title: 'Room' }} />
-      <RoomStack.Screen name="EditRoom" component={EditRoomScreen} options={{ title: 'Edit Room' }} />
+      {isAdmin ? <RoomStack.Screen name="AddRoom" component={AddRoomScreen} options={{ title: 'Add Room' }} /> : null}
+      {isAdmin ? <RoomStack.Screen name="EditRoom" component={EditRoomScreen} options={{ title: 'Edit Room' }} /> : null}
     </RoomStack.Navigator>
   );
 }
@@ -78,12 +79,12 @@ function PaymentStackScreen() {
   );
 }
 
-function ExperienceStackScreen() {
+function ExperienceStackScreen({ isAdmin }) {
   return (
     <ExperienceStack.Navigator initialRouteName="ExperienceList" screenOptions={stackOptions}>
       <ExperienceStack.Screen name="ExperienceList" component={ExperienceListScreen} options={{ title: 'Experiences' }} />
       <ExperienceStack.Screen name="ExperienceDetail" component={ExperienceDetailScreen} />
-      <ExperienceStack.Screen name="ExperienceForm" component={ExperienceFormScreen} options={{ title: 'Experience' }} />
+      {isAdmin ? <ExperienceStack.Screen name="ExperienceForm" component={ExperienceFormScreen} options={{ title: 'Experience' }} /> : null}
     </ExperienceStack.Navigator>
   );
 }
@@ -99,18 +100,28 @@ function ReviewStackScreen() {
 }
 
 export default function MainTabs() {
+  const { isAdmin } = useAuth();
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#2563eb',
-        tabBarInactiveTintColor: '#64748b',
-        tabBarStyle: { backgroundColor: '#ffffff', borderTopColor: '#e2e8f0' },
+        tabBarActiveTintColor: '#0f766e',
+        tabBarInactiveTintColor: '#78716c',
+        tabBarLabelStyle: { fontWeight: '700', fontSize: 11 },
+        tabBarStyle: {
+          backgroundColor: '#fffdf8',
+          borderTopColor: '#f3e8d7',
+          borderTopWidth: 1,
+          height: 66,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
       }}
     >
       <Tab.Screen
         name="RoomsTab"
-        component={RoomStackScreen}
+        children={() => <RoomStackScreen isAdmin={isAdmin} />}
         options={{
           title: 'Rooms',
           tabBarIcon: ({ color, size }) => <Ionicons name="bed" size={size} color={color} />,
@@ -124,14 +135,16 @@ export default function MainTabs() {
           tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={color} />,
         }}
       />
-      <Tab.Screen
-        name="UsersTab"
-        component={UserStackScreen}
-        options={{
-          title: 'Users',
-          tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
-        }}
-      />
+      {isAdmin ? (
+        <Tab.Screen
+          name="UsersTab"
+          component={UserStackScreen}
+          options={{
+            title: 'Users',
+            tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
+          }}
+        />
+      ) : null}
       <Tab.Screen
         name="PaymentsTab"
         component={PaymentStackScreen}
@@ -142,7 +155,7 @@ export default function MainTabs() {
       />
       <Tab.Screen
         name="ExperiencesTab"
-        component={ExperienceStackScreen}
+        children={() => <ExperienceStackScreen isAdmin={isAdmin} />}
         options={{
           title: 'Experiences',
           tabBarIcon: ({ color, size }) => <Ionicons name="map" size={size} color={color} />,
@@ -162,20 +175,20 @@ export default function MainTabs() {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#f2f5fb',
+    backgroundColor: '#f8f4ee',
   },
   header: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    backgroundColor: '#fffdf8',
+    shadowColor: '#292524',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
+    color: '#1c1917',
   },
 });
 

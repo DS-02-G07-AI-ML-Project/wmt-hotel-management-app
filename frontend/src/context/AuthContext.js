@@ -6,14 +6,59 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [ready, setReady] = useState(false);
+
+  const fetchProfile = useCallback(async () => {
+    const response = await requestWithFallback('/api/users/me', {
+      method: 'GET',
+      skipAuth: false,
+    });
+
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok || !json.success || !json.data) {
+      throw new Error(json.message || 'Failed to fetch current user');
+    }
+
+    setCurrentUser(json.data);
+    return json.data;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const stored = await getStoredToken();
-        if (!cancelled) setToken(stored);
+        if (!stored) {
+          if (!cancelled) setToken(null);
+          return;
+        }
+
+        // Ensure persisted token still maps to an existing user.
+        const response = await requestWithFallback('/api/users/me', {
+          method: 'GET',
+          skipAuth: false,
+        });
+
+        if (!response.ok) {
+          await clearStoredToken();
+          if (!cancelled) {
+            setToken(null);
+            setCurrentUser(null);
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setToken(stored);
+          await fetchProfile().catch(async () => {
+            await clearStoredToken();
+            if (!cancelled) {
+              setToken(null);
+              setCurrentUser(null);
+            }
+          });
+        }
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -39,14 +84,15 @@ export function AuthProvider({ children }) {
     }
     await setStoredToken(json.token);
     setToken(json.token);
+    await fetchProfile();
     return json;
-  }, []);
+  }, [fetchProfile]);
 
-  const register = useCallback(async ({ name, email, password, role }) => {
+  const register = useCallback(async ({ name, email, password }) => {
     const response = await requestWithFallback('/api/users/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, role }),
+      body: JSON.stringify({ name, email, password }),
       skipAuth: true,
     });
     const json = await response.json().catch(() => ({}));
@@ -58,24 +104,29 @@ export function AuthProvider({ children }) {
     }
     await setStoredToken(json.token);
     setToken(json.token);
+    await fetchProfile();
     return json;
-  }, []);
+  }, [fetchProfile]);
 
   const logout = useCallback(async () => {
     await clearStoredToken();
     setToken(null);
+    setCurrentUser(null);
   }, []);
 
   const value = useMemo(
     () => ({
       token,
+      currentUser,
       ready,
       login,
       register,
       logout,
+      refreshProfile: fetchProfile,
       isAuthenticated: Boolean(token),
+      isAdmin: currentUser?.role === 'admin',
     }),
-    [token, ready, login, register, logout]
+    [token, currentUser, ready, login, register, logout, fetchProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -84,7 +84,13 @@ export const requestWithFallback = async (path, options = {}) => {
 /** Absolute URL for uploaded files (uses last successful API host). */
 export const getUploadUrl = (path) => {
   if (!path) return null;
-  const clean = String(path).replace(/\\/g, '/');
+  const clean = String(path).trim().replace(/\\/g, '/');
+
+  // Keep absolute URLs untouched (e.g. seeded Unsplash images).
+  if (/^https?:\/\//i.test(clean)) {
+    return clean;
+  }
+
   const relative = clean.replace(/^\/?/, '');
   return `${activeBaseUrl}/${relative}`;
 };

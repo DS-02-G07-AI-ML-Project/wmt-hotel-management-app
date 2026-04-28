@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function UserDetailScreen({ navigation, route }) {
+  const { isAdmin } = useAuth();
   const { id } = route.params;
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -61,12 +63,16 @@ export default function UserDetailScreen({ navigation, route }) {
       <Text style={styles.row}>Phone: {item.phone || '-'}</Text>
       <Text style={styles.row}>Role: {item.role}</Text>
 
-      <TouchableOpacity style={styles.edit} onPress={() => navigation.navigate('UserForm', { id: item._id })}>
-        <Text style={styles.editText}>Edit</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.del} onPress={onDelete} disabled={deleting}>
-        {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.delText}>Delete</Text>}
-      </TouchableOpacity>
+      {isAdmin ? (
+        <>
+          <TouchableOpacity style={styles.edit} onPress={() => navigation.navigate('UserForm', { id: item._id })}>
+            <Text style={styles.editText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.del} onPress={onDelete} disabled={deleting}>
+            {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.delText}>Delete</Text>}
+          </TouchableOpacity>
+        </>
+      ) : null}
     </ScrollView>
   );
 }

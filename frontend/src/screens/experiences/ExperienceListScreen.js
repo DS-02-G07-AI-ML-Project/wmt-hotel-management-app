@@ -3,12 +3,14 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator }
 import { useFocusEffect } from '@react-navigation/native';
 import { requestWithFallback } from '../../config/api';
 import { useListScreenHeader } from '../../hooks/useListScreenHeader';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ExperienceListScreen({ navigation }) {
+  const { isAdmin } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  useListScreenHeader(navigation, { addRoute: 'ExperienceForm', addLabel: '+ Add' });
+  useListScreenHeader(navigation, { addRoute: isAdmin ? 'ExperienceForm' : null, addLabel: '+ Add' });
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +46,10 @@ export default function ExperienceListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.hero}>
+        <Text style={styles.heroTitle}>Curated Experiences</Text>
+        <Text style={styles.heroSub}>{items.length} activities available</Text>
+      </View>
       <FlatList
         data={items}
         keyExtractor={(item) => item._id}
@@ -51,8 +57,8 @@ export default function ExperienceListScreen({ navigation }) {
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('ExperienceDetail', { id: item._id })}>
             <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.sub}>{item.category} · {item.status}</Text>
-            <Text style={styles.meta}>${item.price} · {item.durationHours}h · cap {item.capacity}</Text>
+            <Text style={styles.sub}>{item.category} | {item.status}</Text>
+            <Text style={styles.meta}>${item.price} | {item.durationHours}h | cap {item.capacity}</Text>
           </TouchableOpacity>
         )}
         ListEmptyComponent={<Text style={styles.empty}>No experiences.</Text>}
@@ -62,15 +68,28 @@ export default function ExperienceListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5fb' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f2f5fb' },
-  list: { padding: 16 },
-  card: { backgroundColor: '#fff', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' },
-  title: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
-  sub: { fontSize: 14, color: '#64748b', marginTop: 4 },
-  meta: { fontSize: 13, color: '#94a3b8', marginTop: 6 },
+  container: { flex: 1, backgroundColor: '#f8f4ee' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f4ee' },
+  hero: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 6,
+    borderRadius: 16,
+    backgroundColor: '#ecfccb',
+    borderWidth: 1,
+    borderColor: '#bef264',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  heroTitle: { fontSize: 18, fontWeight: '800', color: '#3f6212' },
+  heroSub: { marginTop: 4, color: '#4d7c0f', fontWeight: '600' },
+  list: { padding: 16, paddingTop: 8 },
+  card: { backgroundColor: '#fffdf8', padding: 16, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: '#f3e8d7' },
+  title: { fontSize: 17, fontWeight: '700', color: '#1f2937' },
+  sub: { fontSize: 14, color: '#57534e', marginTop: 4 },
+  meta: { fontSize: 13, color: '#0f766e', marginTop: 6, fontWeight: '700' },
   err: { color: '#b91c1c', marginBottom: 12 },
-  retry: { backgroundColor: '#2563eb', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  retry: { backgroundColor: '#0f766e', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
   retryText: { color: '#fff', fontWeight: '600' },
-  empty: { textAlign: 'center', color: '#64748b', marginTop: 40 },
+  empty: { textAlign: 'center', color: '#78716c', marginTop: 40 },
 });

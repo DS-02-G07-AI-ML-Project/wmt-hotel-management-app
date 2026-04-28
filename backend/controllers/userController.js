@@ -16,10 +16,39 @@ const sendTokenResponse = (user, statusCode, res) => {
 // @access  Public
 exports.register = async (req, res, next) => {
     try {
-        const { name, email, password, role, phone } = req.body;
+        const { name, email, password, phone } = req.body;
         const normalizedEmail = String(email || '').trim().toLowerCase();
 
         // Create user
+        const user = await User.create({
+            name,
+            email: normalizedEmail,
+            password,
+            // Public registration always creates customer accounts.
+            role: 'customer',
+            phone: phone || '',
+        });
+
+        sendTokenResponse(user, 201, res);
+    } catch (err) {
+        res.status(400);
+        next(err);
+    }
+};
+
+// @desc    Create user (admin only)
+// @route   POST /api/users
+// @access  Private (Admin)
+exports.createUser = async (req, res, next) => {
+    try {
+        const { name, email, password, role, phone } = req.body;
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+
+        if (!name || !normalizedEmail || !password) {
+            res.status(400);
+            throw new Error('Name, email, and password are required');
+        }
+
         const user = await User.create({
             name,
             email: normalizedEmail,
@@ -28,7 +57,7 @@ exports.register = async (req, res, next) => {
             phone: phone || '',
         });
 
-        sendTokenResponse(user, 201, res);
+        res.status(201).json({ success: true, data: user });
     } catch (err) {
         res.status(400);
         next(err);

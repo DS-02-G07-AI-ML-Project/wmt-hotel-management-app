@@ -112,7 +112,22 @@ async function withStep(results, name, fn) {
   }
 }
 
-async function runCrudSuite(baseUrl) {
+async function promoteUserToAdmin(mongoUri, email) {
+  await mongoose.connect(mongoUri);
+  try {
+    const result = await mongoose.connection.db
+      .collection('users')
+      .updateOne({ email: String(email).toLowerCase() }, { $set: { role: 'admin' } });
+
+    if (!result.matchedCount) {
+      throw new Error(`Could not find user to promote: ${email}`);
+    }
+  } finally {
+    await mongoose.disconnect();
+  }
+}
+
+async function runCrudSuite(baseUrl, mongoUri) {
   const results = [];
 
   const adminEmail = `${runId}@example.com`;
@@ -128,20 +143,29 @@ async function runCrudSuite(baseUrl) {
   let experienceId;
 
   await withStep(results, 'auth.register_admin', async () => {
-    const res = await requestJson(baseUrl, '/api/users/register', {
+    const registerRes = await requestJson(baseUrl, '/api/users/register', {
       method: 'POST',
       expectedStatus: 201,
       body: {
         name: 'Smoke Admin',
         email: adminEmail,
         password: adminPassword,
-        role: 'admin',
       },
     });
 
-    assert(res.json && res.json.success === true, 'Register response not successful.');
-    assert(typeof res.json.token === 'string' && res.json.token.length > 20, 'Missing auth token on register.');
-    adminToken = res.json.token;
+    assert(registerRes.json && registerRes.json.success === true, 'Register response not successful.');
+    await promoteUserToAdmin(mongoUri, adminEmail);
+
+    const loginRes = await requestJson(baseUrl, '/api/users/login', {
+      method: 'POST',
+      expectedStatus: 200,
+      body: {
+        email: adminEmail,
+        password: adminPassword,
+      },
+    });
+    assert(loginRes.json?.token, 'Admin login failed.');
+    adminToken = loginRes.json.token;
   });
 
   await withStep(results, 'users.crud', async () => {
@@ -152,7 +176,6 @@ async function runCrudSuite(baseUrl) {
         name: 'Smoke Customer',
         email: customerEmail,
         password: customerPassword,
-        role: 'customer',
         phone: '555100200',
       },
     });
@@ -458,7 +481,7 @@ async function main() {
 
   try {
     await waitForServer(baseUrl);
-    results = await runCrudSuite(baseUrl);
+    results = await runCrudSuite(baseUrl, smokeMongoUri);
   } catch (error) {
     throw new Error(`${error.message}\n\nServer logs:\n${logs}`);
   } finally {
