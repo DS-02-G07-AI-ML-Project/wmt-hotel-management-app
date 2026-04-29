@@ -26,7 +26,17 @@ const localBaseUrls = defaultHosts.map(buildBaseUrl);
 let activeBaseUrl = getConfiguredBaseUrl() || localBaseUrls[0];
 
 const normalizePath = (path) => (path.startsWith('/') ? path : `/${path}`);
-const buildUrl = (baseUrl, path) => `${baseUrl}${normalizePath(path)}`;
+const buildUrl = (baseUrl, path) => {
+  const cleanBase = String(baseUrl || '').replace(/\/+$/, '');
+  const cleanPath = normalizePath(path);
+
+  // Guard against accidental duplication when env base already ends with /api.
+  if (cleanBase.endsWith('/api') && cleanPath.startsWith('/api/')) {
+    return `${cleanBase}${cleanPath.slice(4)}`;
+  }
+
+  return `${cleanBase}${cleanPath}`;
+};
 
 const getCandidateBaseUrls = () => {
   const configured = getConfiguredBaseUrl();
@@ -64,16 +74,25 @@ export const requestWithFallback = async (path, options = {}) => {
   let lastError = null;
 
   for (const baseUrl of orderedBaseUrls) {
+    const url = buildUrl(baseUrl, path);
     try {
-      const response = await fetch(buildUrl(baseUrl, path), {
+      const response = await fetch(url, {
         ...fetchOptions,
         method,
         headers,
         body,
       });
+
+      if (__DEV__ && !response.ok) {
+        console.warn(`[API] ${method} ${url} -> ${response.status}`);
+      }
+
       activeBaseUrl = baseUrl;
       return response;
     } catch (error) {
+      if (__DEV__) {
+        console.warn(`[API] ${method} ${url} -> network error: ${error.message}`);
+      }
       lastError = error;
     }
   }

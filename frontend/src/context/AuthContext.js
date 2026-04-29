@@ -118,6 +118,7 @@ export function AuthProvider({ children }) {
     () => ({
       token,
       currentUser,
+      role: currentUser?.role || null,
       ready,
       login,
       register,

@@ -1,7 +1,11 @@
 const Booking = require('../models/Booking');
 
 const isAdmin = (req) => req.user && req.user.role === 'admin';
-const isOwner = (req, ownerId) => String(ownerId) === String(req.user.id);
+const isOwner = (req, ownerId) => {
+  if (!req.user || !ownerId) return false;
+  const owner = ownerId && ownerId._id ? ownerId._id : ownerId;
+  return String(owner) === String(req.user._id || req.user.id);
+};
 const pick = (source, keys) => {
   const result = {};
   keys.forEach((key) => {
