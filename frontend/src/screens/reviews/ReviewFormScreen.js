@@ -5,6 +5,42 @@ import { useAuth } from '../../context/AuthContext';
 
 const STATUSES = ['Visible', 'Hidden'];
 
+const getRoomNumberValue = (roomNumber) => {
+  const numberOnly = String(roomNumber || '').replace(/\D/g, '');
+  return Number(numberOnly) || 0;
+};
+
+const sortRoomsByNumber = (roomsList) => {
+  return [...roomsList].sort(
+    (a, b) => getRoomNumberValue(a.roomNumber) - getRoomNumberValue(b.roomNumber)
+  );
+};
+
+const sortExperiencesByDate = (experiencesList) => {
+  return [...experiencesList].sort((a, b) => {
+    const dateA = new Date(a.scheduleDate || a.date || a.eventDate || 0);
+    const dateB = new Date(b.scheduleDate || b.date || b.eventDate || 0);
+    return dateA - dateB;
+  });
+};
+
+const getRoomLabel = (room) => {
+  const roomNumber = room.roomNumber || 'Room';
+  const roomType = room.type || room.roomType || 'Room';
+  const price = Number(room.pricePerNight || room.price || room.pricePerMonth || 0);
+
+  return `#${roomNumber} - ${roomType} Room - Rs. ${price}`;
+};
+
+const getExperienceLabel = (experience) => {
+  const title = experience.title || experience.name || 'Experience';
+  const rawDate = experience.scheduleDate || experience.date || experience.eventDate;
+  const date = rawDate ? new Date(rawDate).toISOString().slice(0, 10) : 'No date';
+  const price = Number(experience.price || 0);
+
+  return `${title} - ${date} - Rs.${price}`;
+};
+
 export default function ReviewFormScreen({ navigation, route }) {
   const { currentUser, isAdmin } = useAuth();
   const editId = route.params?.id;
@@ -78,9 +114,22 @@ export default function ReviewFormScreen({ navigation, route }) {
     })();
   }, [editId]);
 
+  const selectedRoom = rooms.find((room) => String(room._id) === String(roomId));
+
+  const selectedExperience = experiences.find(
+    (experience) => String(experience._id) === String(experienceId)
+  );
+
   const submit = async () => {
     if ((!isAdmin && !currentUser) || (!isAdmin && !comment.trim()) || (isAdmin && !userId.trim()) || !comment.trim()) {
       Alert.alert('Validation', isAdmin ? 'User and comment are required.' : 'Comment is required.');
+      return;
+    }
+
+  const ratingValue = Number(rating);
+
+    if (!ratingValue || ratingValue < 1 || ratingValue > 5) {
+      Alert.alert('Validation', 'Rating must be between 1 and 5.');
       return;
     }
 
@@ -88,7 +137,7 @@ export default function ReviewFormScreen({ navigation, route }) {
       user: isAdmin ? userId.trim() : currentUser?._id,
       room: roomId.trim() || null,
       experience: experienceId.trim() || null,
-      rating: Number(rating),
+      rating: ratingValue,
       comment: comment.trim(),
       status,
     };
@@ -124,8 +173,8 @@ export default function ReviewFormScreen({ navigation, route }) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {isAdmin ? (
         <>
-          <Text style={styles.label}>User ID *</Text>
-          <TextInput style={styles.input} value={userId} onChangeText={setUserId} placeholder="Mongo id" />
+          <Text style={styles.label}>Select User *</Text>
+          <TextInput style={styles.input} value={userId} onChangeText={setUserId} placeholder="Select user id" />
           {users.length > 0 ? (
             <View style={styles.row}>
               {users.slice(0, 6).map((u) => (
@@ -138,33 +187,96 @@ export default function ReviewFormScreen({ navigation, route }) {
         </>
       ) : null}
 
-      <Text style={styles.label}>Room ID (optional)</Text>
-      <TextInput style={styles.input} value={roomId} onChangeText={setRoomId} />
-      {rooms.length > 0 ? (
-        <View style={styles.row}>
-          {rooms.slice(0, 6).map((r) => (
-            <TouchableOpacity key={r._id} style={styles.chip} onPress={() => setRoomId(r._id)}>
-              <Text style={styles.chipText}>#{r.roomNumber}</Text>
+      <Text style={styles.label}>Select Room </Text>
+
+        <View style={styles.selectedBox}>
+          <Text style={styles.selectedText}>
+            {selectedRoom ? getRoomLabel(selectedRoom) : 'No room selected'}
+          </Text>
+        </View>
+
+        {rooms.length > 0 ? (
+          <View style={styles.row}>
+            {sortRoomsByNumber(rooms).map((r) => (
+              <TouchableOpacity
+                key={r._id}
+                style={[
+                  styles.chip,
+                  String(roomId) === String(r._id) && styles.chipOn,
+                ]}
+                onPress={() => setRoomId(r._id)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    String(roomId) === String(r._id) && styles.chipTextOn,
+                  ]}
+                >
+                  {getRoomLabel(r)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+
+        {roomId ? (
+          <TouchableOpacity onPress={() => setRoomId('')}>
+            <Text style={styles.clearText}>Clear selected room</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        <Text style={styles.label}>Select Experience </Text>
+
+        <View style={styles.selectedBox}>
+          <Text style={styles.selectedText}>
+            {selectedExperience ? getExperienceLabel(selectedExperience) : 'No experience selected'}
+          </Text>
+        </View>
+
+        {experiences.length > 0 ? (
+          <View style={styles.row}>
+            {sortExperiencesByDate(experiences).map((x) => (
+              <TouchableOpacity
+                key={x._id}
+                style={[
+                  styles.chip,
+                  String(experienceId) === String(x._id) && styles.chipOn,
+                ]}
+                onPress={() => setExperienceId(x._id)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    String(experienceId) === String(x._id) && styles.chipTextOn,
+                  ]}
+                >
+                  {getExperienceLabel(x)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+
+        {experienceId ? (
+          <TouchableOpacity onPress={() => setExperienceId('')}>
+            <Text style={styles.clearText}>Clear selected experience</Text>
+          </TouchableOpacity>
+        ) : null}
+                    
+       
+
+      <Text style={styles.label}>Rating *</Text>
+
+        <View style={styles.starRow}>
+          {[1, 2, 3, 4, 5].map((value) => (
+            <TouchableOpacity key={value} onPress={() => setRating(String(value))}>
+              <Text style={styles.star}>
+                {Number(rating) >= value ? '★' : '☆'}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
-      ) : null}
-
-      <Text style={styles.label}>Experience ID (optional)</Text>
-      <TextInput style={styles.input} value={experienceId} onChangeText={setExperienceId} />
-      {experiences.length > 0 ? (
-        <View style={styles.row}>
-          {experiences.slice(0, 6).map((x) => (
-            <TouchableOpacity key={x._id} style={styles.chip} onPress={() => setExperienceId(x._id)}>
-              <Text style={styles.chipText}>{x.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      ) : null}
-
-      <Text style={styles.label}>Rating (1-5)</Text>
-      <TextInput style={styles.input} value={rating} onChangeText={setRating} keyboardType="number-pad" />
-
+      
       <Text style={styles.label}>Comment *</Text>
       <TextInput style={[styles.input, styles.tall]} value={comment} onChangeText={setComment} multiline />
 
@@ -196,10 +308,42 @@ const styles = StyleSheet.create({
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 16 },
   tall: { minHeight: 90, textAlignVertical: 'top' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#e2e8f0' },
+  chip: {paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, backgroundColor: '#e2e8f0', marginBottom: 4, },
   chipOn: { backgroundColor: '#2563eb' },
-  chipText: { fontSize: 12, color: '#334155' },
+  chipText: { fontSize: 12, color: '#334155', fontWeight: '500' },
   chipTextOn: { color: '#fff', fontWeight: '600' },
   save: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 20 },
   saveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  selectedBox: {
+  backgroundColor: '#fff',
+  borderWidth: 1,
+  borderColor: '#e2e8f0',
+  borderRadius: 10,
+  padding: 12,
+},
+
+selectedText: {
+  fontSize: 14,
+  color: '#334155',
+  fontWeight: '500',
+},
+
+clearText: {
+  color: '#dc2626',
+  fontSize: 13,
+  fontWeight: '600',
+  marginBottom: 8,
+},
+
+starRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginVertical: 8,
+},
+
+star: {
+  fontSize: 34,
+  color: '#f59e0b',
+  marginRight: 6,
+},
 });

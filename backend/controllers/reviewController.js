@@ -25,12 +25,20 @@ const requireAuthenticatedUser = (req, res) => {
 exports.getReviews = async (req, res, next) => {
   try {
     requireAuthenticatedUser(req, res);
-    const query = isAdmin(req) ? {} : { user: req.user.id };
+
+    const query = isAdmin(req) ? {} : { status: 'Visible' };
+
     const reviews = await Review.find(query)
       .populate('user', 'name email')
       .populate('room', 'roomNumber type')
-      .populate('experience', 'title category');
-    res.status(200).json({ success: true, count: reviews.length, data: reviews });
+      .populate('experience', 'title category')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: reviews.length,
+      data: reviews,
+    });
   } catch (error) {
     next(error);
   }
