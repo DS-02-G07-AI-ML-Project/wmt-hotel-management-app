@@ -11,9 +11,28 @@ import {
 } from 'react-native';
 import { requestWithFallback } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
+import {
+  formatValidationMessage,
+  isPositiveNumber,
+  isValidMongoId,
+  parseDateInput,
+} from '../../utils/validation';
 
 const METHODS = ['Cash', 'Card', 'Bank', 'Online'];
 const STATUSES = ['Pending', 'Completed', 'Failed', 'Refunded'];
+const TEST_CARD = {
+  name: 'Test Customer',
+  number: '4242 4242 4242 4242',
+  expiry: '12/30',
+  cvc: '123',
+};
+
+const cardDigits = (value) => String(value || '').replace(/\D/g, '');
+const maskCard = (value) => {
+  const digits = cardDigits(value).slice(0, 19);
+  return digits.replace(/(.{4})/g, '$1 ').trim();
+};
+const isValidExpiry = (value) => /^(0[1-9]|1[0-2])\/\d{2}$/.test(String(value || '').trim());
 
 export default function PaymentFormScreen({ navigation, route }) {
   const { currentUser, isAdmin } = useAuth();
@@ -33,6 +52,10 @@ export default function PaymentFormScreen({ navigation, route }) {
   const [bookingId, setBookingId] = useState('');
   const [paidAt, setPaidAt] = useState('');
   const [notes, setNotes] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
 
   useEffect(() => {
     if (!isAdmin && editId) {
@@ -95,35 +118,56 @@ export default function PaymentFormScreen({ navigation, route }) {
   }, [editId]);
 
   const submit = async () => {
-    if (!amount || Number(amount) <= 0) {
-      Alert.alert('Validation', 'Valid amount required.');
+    const errors = {};
+    const cardNumberDigits = cardDigits(cardNumber);
+    const paidAtDate = paidAt ? parseDateInput(paidAt) : new Date();
+
+    if (!isPositiveNumber(amount)) errors.amount = 'Amount must be greater than 0.';
+    if (!isValidMongoId(bookingId)) errors.booking = 'Select a valid booking.';
+    if (isAdmin && !isValidMongoId(userId)) errors.user = 'Select a valid user.';
+    if (!paidAtDate) errors.paidAt = 'Paid at must be a valid date and time.';
+
+    if (method === 'Card') {
+      if (!cardName.trim()) {
+        errors.cardName = 'Cardholder name is required.';
+      }
+      if (cardNumberDigits.length < 12) {
+        errors.cardNumber = 'Enter a valid test card number.';
+      }
+      if (!isValidExpiry(cardExpiry)) {
+        errors.cardExpiry = 'Card expiry must use MM/YY.';
+      }
+      if (cardDigits(cardCvc).length < 3) {
+        errors.cardCvc = 'Card CVC is required.';
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      Alert.alert('Validation', formatValidationMessage(errors));
       return;
     }
 
-    if (!bookingId.trim()) {
-      Alert.alert('Validation', 'Please select a booking.');
-      return;
-    }
+    const generatedCardReference =
+      method === 'Card' && !reference.trim()
+        ? `TEST-CARD-${cardNumberDigits.slice(-4)}-${Date.now()}`
+        : reference.trim();
+    const cardNote =
+      method === 'Card' ? `Test card ending ${cardNumberDigits.slice(-4)}` : '';
 
     const payload = {
       amount: Number(amount),
       currency: currency.trim() || 'USD',
       method,
       status,
-      reference: reference.trim(),
+      reference: generatedCardReference,
       user: isAdmin ? userId.trim() : currentUser?._id,
       booking: bookingId.trim() || null,
-      paidAt: paidAt ? new Date(paidAt.replace(' ', 'T')).toISOString() : new Date().toISOString(),
-      notes: notes.trim(),
+      paidAt: paidAtDate.toISOString(),
+      notes: [notes.trim(), cardNote].filter(Boolean).join(' | '),
     };
 
     if (!isAdmin && currentUser?._id) {
       payload.user = currentUser._id;
-    }
-
-    if (isAdmin && !payload.user) {
-      Alert.alert('Validation', 'User is required for admin payment records.');
-      return;
     }
     setSaving(true);
     try {
@@ -161,6 +205,9 @@ export default function PaymentFormScreen({ navigation, route }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.header}>{editId ? 'Edit payment' : 'Create payment'}</Text>
+      <Text style={styles.subHeader}>Link a booking, choose a method, and record a safe payment reference.</Text>
+
       {isAdmin ? (
         <>
           <Text style={styles.label}>User ID *</Text>
@@ -195,6 +242,61 @@ export default function PaymentFormScreen({ navigation, route }) {
           </TouchableOpacity>
         ))}
       </View>
+
+      {method === 'Card' ? (
+        <View style={styles.cardBox}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Test card</Text>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCardName(TEST_CARD.name);
+                setCardNumber(TEST_CARD.number);
+                setCardExpiry(TEST_CARD.expiry);
+                setCardCvc(TEST_CARD.cvc);
+              }}
+            >
+              <Text style={styles.testButtonText}>Fill test card</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.label}>Cardholder name *</Text>
+          <TextInput style={styles.input} value={cardName} onChangeText={setCardName} />
+
+          <Text style={styles.label}>Card number *</Text>
+          <TextInput
+            style={styles.input}
+            value={cardNumber}
+            onChangeText={(value) => setCardNumber(maskCard(value))}
+            keyboardType="number-pad"
+            maxLength={23}
+            placeholder="4242 4242 4242 4242"
+          />
+
+          <View style={styles.twoColumn}>
+            <View style={styles.column}>
+              <Text style={styles.label}>Expiry *</Text>
+              <TextInput
+                style={styles.input}
+                value={cardExpiry}
+                onChangeText={setCardExpiry}
+                placeholder="12/30"
+                maxLength={5}
+              />
+            </View>
+            <View style={styles.column}>
+              <Text style={styles.label}>CVC *</Text>
+              <TextInput
+                style={styles.input}
+                value={cardCvc}
+                onChangeText={(value) => setCardCvc(cardDigits(value).slice(0, 4))}
+                keyboardType="number-pad"
+                maxLength={4}
+              />
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       {isAdmin ? (
         <>
@@ -257,21 +359,50 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f5fb' },
   content: { padding: 16, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  label: { fontWeight: '600', color: '#475569', marginBottom: 6, marginTop: 8 },
+  header: { fontSize: 25, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
+  subHeader: { color: '#64748b', marginBottom: 14 },
+  label: { fontWeight: '700', color: '#334155', marginBottom: 6, marginTop: 8 },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 10,
+    borderColor: '#cbd5e1',
+    borderRadius: 12,
     padding: 12,
     fontSize: 16,
   },
   tall: { minHeight: 72, textAlignVertical: 'top' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#e2e8f0' },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#e2e8f0' },
   chipOn: { backgroundColor: '#2563eb' },
   chipText: { fontSize: 12, color: '#334155' },
   chipTextOn: { color: '#fff', fontWeight: '600' },
+  cardBox: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+  },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: '#1e3a8a' },
+  testButton: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  testButtonText: { color: '#1d4ed8', fontWeight: '700', fontSize: 12 },
+  twoColumn: { flexDirection: 'row', gap: 10 },
+  column: { flex: 1 },
   save: {
     backgroundColor: '#2563eb',
     paddingVertical: 14,

@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 
 const experienceSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    description: { type: String, required: true, trim: true },
+    title: { type: String, required: true, trim: true, minlength: [3, 'Title must be at least 3 characters'] },
+    description: { type: String, required: true, trim: true, minlength: [10, 'Description must be at least 10 characters'] },
     category: {
       type: String,
       enum: ['Hiking', 'Cooking Class', 'Wellness', 'City Tour', 'Other'],

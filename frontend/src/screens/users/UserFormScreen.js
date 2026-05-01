@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
+import { formatValidationMessage, isBlank, isValidEmail, isValidPhone } from '../../utils/validation';
 
 const ROLES = ['customer', 'admin'];
 
@@ -39,8 +40,15 @@ export default function UserFormScreen({ navigation, route }) {
   }, [editId]);
 
   const submit = async () => {
-    if (!name.trim() || !email.trim() || (!editId && password.length < 6)) {
-      Alert.alert('Validation', 'Name and email are required. New users need password (min 6).');
+    const errors = {};
+    if (isBlank(name)) errors.name = 'Name is required.';
+    else if (name.trim().length < 2) errors.name = 'Name must be at least 2 characters.';
+    if (!isValidEmail(email)) errors.email = 'Enter a valid email address.';
+    if (!editId && password.length < 6) errors.password = 'Password must be at least 6 characters.';
+    if (!isValidPhone(phone)) errors.phone = 'Phone must be 7-20 digits and may include +, spaces, or hyphens.';
+
+    if (Object.keys(errors).length > 0) {
+      Alert.alert('Validation', formatValidationMessage(errors));
       return;
     }
 
@@ -84,6 +92,9 @@ export default function UserFormScreen({ navigation, route }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.header}>{editId ? 'Edit user' : 'Create user'}</Text>
+      <Text style={styles.subHeader}>Set account details, contact information, and access role.</Text>
+
       <Text style={styles.label}>Name *</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} />
 
@@ -124,13 +135,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f5fb' },
   content: { padding: 16, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  label: { fontWeight: '600', color: '#475569', marginBottom: 6, marginTop: 8 },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 16 },
+  header: { fontSize: 25, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
+  subHeader: { color: '#64748b', marginBottom: 14 },
+  label: { fontWeight: '700', color: '#334155', marginBottom: 6, marginTop: 8 },
+  input: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 12, padding: 12, fontSize: 16 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#e2e8f0' },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#e2e8f0' },
   chipOn: { backgroundColor: '#2563eb' },
   chipText: { fontSize: 12, color: '#334155' },
   chipTextOn: { color: '#fff', fontWeight: '600' },
-  save: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 20 },
+  save: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 20 },
   saveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

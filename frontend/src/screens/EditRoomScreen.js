@@ -5,6 +5,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { requestWithFallback } from '../config/api';
+import { isPositiveNumber, isWholeNumberAtLeast } from '../utils/validation';
 const ROOM_TYPES = ['Single', 'Double', 'Dormitory', 'Suite']; 
 
 const EditRoomScreen = () => {
@@ -27,14 +28,15 @@ const EditRoomScreen = () => {
     let valid = true;
     let newErrors = {};
 
-    if (!roomNumber.trim()) { newErrors.roomNumber = 'Room Number is required'; valid = false; }
-    if (!pricePerMonth.trim() || isNaN(pricePerMonth) || Number(pricePerMonth) <= 0) { 
-        newErrors.pricePerMonth = 'Valid Price is required'; valid = false; 
+    if (!roomNumber.trim()) { newErrors.roomNumber = 'Room number is required.'; valid = false; }
+    if (!isPositiveNumber(pricePerMonth)) {
+        newErrors.pricePerMonth = 'Enter a price greater than 0.'; valid = false;
     }
-    if (!capacity.trim() || isNaN(capacity) || Number(capacity) < 1) { 
-        newErrors.capacity = 'Capacity must be at least 1'; valid = false; 
+    if (!isWholeNumberAtLeast(capacity, 1)) {
+        newErrors.capacity = 'Capacity must be a whole number of at least 1.'; valid = false;
     }
-    if (!description.trim()) { newErrors.description = 'Description is required'; valid = false; }
+    if (!description.trim()) { newErrors.description = 'Description is required.'; valid = false; }
+    else if (description.trim().length < 10) { newErrors.description = 'Description must be at least 10 characters.'; valid = false; }
 
     setErrors(newErrors);
     return valid;
@@ -142,7 +144,7 @@ const EditRoomScreen = () => {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Price / Month ($) *</Text>
+        <Text style={styles.label}>Price / Night ($) *</Text>
         <TextInput 
           style={[styles.input, errors.pricePerMonth && styles.inputError]} 
           value={pricePerMonth} onChangeText={(t) => {setPricePerMonth(t); setErrors({...errors, pricePerMonth: null})}}

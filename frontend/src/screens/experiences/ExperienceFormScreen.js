@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
+import {
+  formatValidationMessage,
+  isPositiveNumber,
+  isWholeNumberAtLeast,
+  parseDateInput,
+} from '../../utils/validation';
 
 const CATEGORIES = ['Hiking', 'Cooking Class', 'Wellness', 'City Tour', 'Other'];
 const STATUSES = ['Available', 'Sold Out', 'Cancelled'];
@@ -45,8 +51,18 @@ export default function ExperienceFormScreen({ navigation, route }) {
   }, [editId]);
 
   const submit = async () => {
-    if (!title.trim() || !description.trim() || !price || !scheduleDate.trim()) {
-      Alert.alert('Validation', 'Title, description, price and schedule date are required.');
+    const errors = {};
+    const schedule = parseDateInput(scheduleDate);
+
+    if (title.trim().length < 3) errors.title = 'Title must be at least 3 characters.';
+    if (description.trim().length < 10) errors.description = 'Description must be at least 10 characters.';
+    if (!isPositiveNumber(price)) errors.price = 'Price must be greater than 0.';
+    if (!isWholeNumberAtLeast(durationHours, 1)) errors.duration = 'Duration must be at least 1 hour.';
+    if (!isWholeNumberAtLeast(capacity, 1)) errors.capacity = 'Capacity must be at least 1.';
+    if (!schedule) errors.scheduleDate = 'Enter a valid schedule date and time.';
+
+    if (Object.keys(errors).length > 0) {
+      Alert.alert('Validation', formatValidationMessage(errors));
       return;
     }
 
@@ -57,7 +73,7 @@ export default function ExperienceFormScreen({ navigation, route }) {
       price: Number(price),
       durationHours: Number(durationHours),
       capacity: Number(capacity),
-      scheduleDate: new Date(scheduleDate.replace(' ', 'T')).toISOString(),
+      scheduleDate: schedule.toISOString(),
       status,
     };
 
@@ -86,6 +102,9 @@ export default function ExperienceFormScreen({ navigation, route }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.header}>{editId ? 'Edit experience' : 'Create experience'}</Text>
+      <Text style={styles.subHeader}>Add schedule, price, capacity, and availability details.</Text>
+
       <Text style={styles.label}>Title *</Text>
       <TextInput style={styles.input} value={title} onChangeText={setTitle} />
 
@@ -133,14 +152,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f5fb' },
   content: { padding: 16, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  label: { fontWeight: '600', color: '#475569', marginBottom: 6, marginTop: 8 },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 16 },
+  header: { fontSize: 25, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
+  subHeader: { color: '#64748b', marginBottom: 14 },
+  label: { fontWeight: '700', color: '#334155', marginBottom: 6, marginTop: 8 },
+  input: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 12, padding: 12, fontSize: 16 },
   tall: { minHeight: 90, textAlignVertical: 'top' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#e2e8f0' },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#e2e8f0' },
   chipOn: { backgroundColor: '#2563eb' },
   chipText: { fontSize: 12, color: '#334155' },
   chipTextOn: { color: '#fff', fontWeight: '600' },
-  save: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 20 },
+  save: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 20 },
   saveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

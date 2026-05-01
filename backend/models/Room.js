@@ -20,6 +20,7 @@ const roomSchema = new mongoose.Schema({
     pricePerNight: {
         type: Number,
         required: [true, 'Please add price per night'],
+        min: [0, 'Price per night cannot be negative'],
     },
     status: {
         type: String,
@@ -38,6 +39,8 @@ const roomSchema = new mongoose.Schema({
     description: {
         type: String,
         required: [true, 'Please add a room description'],
+        trim: true,
+        minlength: [10, 'Description must be at least 10 characters'],
     }
 }, {
     timestamps: true, // Automatically manages createdAt and updatedAt

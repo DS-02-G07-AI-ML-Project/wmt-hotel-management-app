@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { isBlank, isValidEmail } from '../utils/validation';
 
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
@@ -23,8 +24,20 @@ export default function RegisterScreen({ navigation }) {
   const handleRegister = async () => {
     setError('');
     const normalizedEmail = email.trim().toLowerCase();
-    if (!name.trim() || !normalizedEmail || !password || password.length < 6) {
-      setError('Name, email, and password (min 6 characters) are required.');
+    if (isBlank(name)) {
+      setError('Enter your full name.');
+      return;
+    }
+    if (name.trim().length < 2) {
+      setError('Name must be at least 2 characters.');
+      return;
+    }
+    if (!isValidEmail(normalizedEmail)) {
+      setError('Enter a valid email address.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setError('Password must be at least 6 characters.');
       return;
     }
     setLoading(true);

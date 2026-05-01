@@ -17,4 +17,11 @@ const bookingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+bookingSchema.pre('validate', function (next) {
+  if (this.checkIn && this.checkOut && this.checkOut <= this.checkIn) {
+    this.invalidate('checkOut', 'Check-out date must be after check-in date');
+  }
+  next();
+});
+
 module.exports = mongoose.model('Booking', bookingSchema);

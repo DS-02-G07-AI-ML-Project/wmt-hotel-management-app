@@ -102,7 +102,6 @@ function ReviewStackScreen() {
 export default function MainTabs() {
   const { role } = useAuth();
   const isAdmin = role === 'admin';
-  const isCustomer = role === 'customer';
 
   return (
     <Tab.Navigator
@@ -147,16 +146,14 @@ export default function MainTabs() {
           }}
         />
       ) : null}
-      {!isCustomer ? (
-        <Tab.Screen
-          name="PaymentsTab"
-          component={PaymentStackScreen}
-          options={{
-            title: 'Pay',
-            tabBarIcon: ({ color, size }) => <Ionicons name="card" size={size} color={color} />,
-          }}
-        />
-      ) : null}
+      <Tab.Screen
+        name="PaymentsTab"
+        component={PaymentStackScreen}
+        options={{
+          title: 'Pay',
+          tabBarIcon: ({ color, size }) => <Ionicons name="card" size={size} color={color} />,
+        }}
+      />
       <Tab.Screen
         name="ExperiencesTab"
         children={() => <ExperienceStackScreen isAdmin={isAdmin} />}

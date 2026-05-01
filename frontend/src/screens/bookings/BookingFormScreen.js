@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { requestWithFallback } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
+import {
+  formatValidationMessage,
+  isNonNegativeNumber,
+  isValidMongoId,
+  parseDateInput,
+} from '../../utils/validation';
 
 const STATUSES = ['pending', 'confirmed', 'checked_in', 'cancelled', 'completed'];
 
@@ -80,15 +86,31 @@ export default function BookingFormScreen({ navigation, route }) {
   }, [editId]);
 
   const submit = async () => {
-    if ((!isAdmin && !currentUser) || (!isAdmin && !roomId) || !checkIn || !checkOut || (isAdmin && !userId)) {
-      Alert.alert('Validation', isAdmin ? 'User, room, check-in and check-out are required.' : 'Room, check-in and check-out are required.');
+    const errors = {};
+    const checkInDate = parseDateInput(checkIn);
+    const checkOutDate = parseDateInput(checkOut);
+
+    if (!currentUser && !isAdmin) errors.user = 'You must be signed in to create a booking.';
+    if (isAdmin && !isValidMongoId(userId)) errors.user = 'Select a valid user.';
+    if (!isValidMongoId(roomId)) errors.room = 'Select a valid room.';
+    if (!checkInDate) errors.checkIn = 'Enter a valid check-in date.';
+    if (!checkOutDate) errors.checkOut = 'Enter a valid check-out date.';
+    if (checkInDate && checkOutDate && checkOutDate <= checkInDate) {
+      errors.checkOut = 'Check-out must be after check-in.';
+    }
+    if (isAdmin && totalAmount && !isNonNegativeNumber(totalAmount)) {
+      errors.totalAmount = 'Total amount must be 0 or greater.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      Alert.alert('Validation', formatValidationMessage(errors));
       return;
     }
 
     const payload = {
       room: roomId,
-      checkIn: new Date(checkIn).toISOString(),
-      checkOut: new Date(checkOut).toISOString(),
+      checkIn: checkInDate.toISOString(),
+      checkOut: checkOutDate.toISOString(),
       status,
       notes: notes.trim(),
       totalAmount: totalAmount ? Number(totalAmount) : 0,
@@ -125,6 +147,9 @@ export default function BookingFormScreen({ navigation, route }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.header}>{editId ? 'Edit booking' : 'Create booking'}</Text>
+      <Text style={styles.subHeader}>Choose a room, dates, and keep booking details valid.</Text>
+
       {isAdmin ? (
         <>
           <Text style={styles.label}>User ID *</Text>
@@ -195,14 +220,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f5fb' },
   content: { padding: 16, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  label: { fontWeight: '600', color: '#475569', marginBottom: 6, marginTop: 8 },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 16 },
+  header: { fontSize: 25, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
+  subHeader: { color: '#64748b', marginBottom: 14 },
+  label: { fontWeight: '700', color: '#334155', marginBottom: 6, marginTop: 8 },
+  input: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 12, padding: 12, fontSize: 16 },
   tall: { minHeight: 80, textAlignVertical: 'top' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#e2e8f0' },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#e2e8f0' },
   chipOn: { backgroundColor: '#2563eb' },
   chipText: { fontSize: 12, color: '#334155' },
   chipTextOn: { color: '#fff', fontWeight: '600' },
-  save: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 20 },
+  save: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 20 },
   saveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

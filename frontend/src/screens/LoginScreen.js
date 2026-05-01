@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { isValidEmail } from '../utils/validation';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
@@ -22,8 +23,12 @@ export default function LoginScreen({ navigation }) {
   const handleLogin = async () => {
     setError('');
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !password) {
-      setError('Enter email and password.');
+    if (!isValidEmail(normalizedEmail)) {
+      setError('Enter a valid email address.');
+      return;
+    }
+    if (!password) {
+      setError('Enter your password.');
       return;
     }
     setLoading(true);

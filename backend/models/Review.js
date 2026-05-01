@@ -16,4 +16,11 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+reviewSchema.pre('validate', function (next) {
+  if (!this.room && !this.experience) {
+    this.invalidate('room', 'Select a room or experience to review');
+  }
+  next();
+});
+
 module.exports = mongoose.model('Review', reviewSchema);

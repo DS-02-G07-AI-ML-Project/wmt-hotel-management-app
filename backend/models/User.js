@@ -6,6 +6,9 @@ const UserSchema = new mongoose.Schema({
     name: {
         type: String,
         required: [true, 'Please add a name'],
+        trim: true,
+        minlength: [2, 'Name must be at least 2 characters'],
+        maxlength: [80, 'Name cannot be longer than 80 characters'],
     },
     email: {
         type: String,
@@ -27,11 +30,12 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: '',
         trim: true,
+        match: [/^[+()\d\s-]{7,20}$|^$/, 'Please add a valid phone number'],
     },
     password: {
         type: String,
         required: [true, 'Please add a password'],
-        minlength: 6,
+        minlength: [6, 'Password must be at least 6 characters'],
         select: false, // Do not return password by default
     },
     createdAt: {

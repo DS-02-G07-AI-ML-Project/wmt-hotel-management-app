@@ -9,7 +9,13 @@
       "**/*"
     ],
     "extra": {
-      "apiBaseUrl": ""
+      "apiBaseUrl": "https://wmt-hotel-management-app-2.onrender.com",
+      "eas": {
+        "projectId": "4f82457d-2e8b-475d-b713-dd6a447beda2"
+      }
+    },
+    "android": {
+      "package": "com.dularamadusanka.frontend"
     }
   }
 }
