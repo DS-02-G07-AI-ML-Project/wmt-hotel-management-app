@@ -1,0 +1,54 @@
+# Quick Fix - Password Reset Not Working
+
+## Problem
+Backend returns: **"Email, token, and password fields are required"**
+
+## Solution (Do This NOW)
+
+```bash
+# Kill all node
+taskkill /F /IM node.exe
+
+# Clear cache
+cd backend
+rmdir /S /Q node_modules
+del package-lock.json
+
+# Reinstall
+npm install
+
+# Restart
+npm start
+```
+
+## Verify It Works
+
+```bash
+curl http://192.168.1.8:5000/health
+```
+
+You should see:
+```json
+{"version": "reset-password-no-token"}
+```
+
+## Then Try in App
+1. Forgot Password
+2. Enter: `guest1@gmail.com`  
+3. New password: `GuestPass123!` (6+ chars, uppercase, number, special char!)
+4. Confirm: `GuestPass123!`
+5. Click Reset
+
+---
+
+## Password Rules
+- ✅ 6+ characters
+- ✅ Uppercase letter
+- ✅ Number
+- ✅ Special character (!@#$%^&*)
+
+Example: `GuestPass123!` ✓
+
+---
+
+Done? Changes deployed!
