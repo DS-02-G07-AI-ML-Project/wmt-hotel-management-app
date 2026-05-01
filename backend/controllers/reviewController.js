@@ -22,11 +22,17 @@ const requireAuthenticatedUser = (req, res) => {
   }
 };
 
+const ensureReviewTarget = (payload, res) => {
+  if (!payload.room && !payload.experience) {
+    res.status(400);
+    throw new Error('A review must be linked to a room or an experience');
+  }
+};
+
 exports.getReviews = async (req, res, next) => {
   try {
     requireAuthenticatedUser(req, res);
-    const query = isAdmin(req) ? {} : { user: req.user.id };
-    const reviews = await Review.find(query)
+    const reviews = await Review.find({})
       .populate('user', 'name email')
       .populate('room', 'roomNumber type')
       .populate('experience', 'title category');
@@ -48,11 +54,6 @@ exports.getReview = async (req, res, next) => {
       throw new Error(`Review not found with id of ${req.params.id}`);
     }
 
-    if (!isAdmin(req) && !isOwner(req, review.user?._id || review.user)) {
-      res.status(403);
-      throw new Error('Not authorized to access this review');
-    }
-
     res.status(200).json({ success: true, data: review });
   } catch (error) {
     next(error);
@@ -69,6 +70,8 @@ exports.createReview = async (req, res, next) => {
       payload.user = req.user.id;
       delete payload.status;
     }
+
+    ensureReviewTarget(payload, res);
 
     const review = await Review.create(payload);
     const populated = await Review.findById(review._id)
@@ -103,6 +106,8 @@ exports.updateReview = async (req, res, next) => {
       payload.user = req.user.id;
       delete payload.status;
     }
+
+    ensureReviewTarget(payload, res);
 
     review = await Review.findByIdAndUpdate(req.params.id, payload, {
       new: true,

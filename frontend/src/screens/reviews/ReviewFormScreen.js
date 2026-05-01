@@ -98,6 +98,11 @@ export default function ReviewFormScreen({ navigation, route }) {
       return;
     }
 
+    if (!roomId.trim() && !experienceId.trim()) {
+      Alert.alert('Validation', 'Select a room or an experience before saving the review.');
+      return;
+    }
+
     const payload = {
       user: isAdmin ? userId.trim() : currentUser?._id,
       room: roomId.trim() || null,
@@ -133,6 +138,8 @@ export default function ReviewFormScreen({ navigation, route }) {
   };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#2563eb" /></View>;
+
+  const stars = Array.from({ length: 5 }, (_, index) => index + 1);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -179,8 +186,24 @@ export default function ReviewFormScreen({ navigation, route }) {
         </View>
       ) : null}
 
-      <Text style={styles.label}>Rating (1-5)</Text>
-      <TextInput style={styles.input} value={rating} onChangeText={setRating} keyboardType="number-pad" />
+      <Text style={styles.label}>Rating *</Text>
+      <View style={styles.starRow}>
+        {stars.map((star) => {
+          const active = Number(rating) >= star;
+          return (
+            <TouchableOpacity
+              key={star}
+              style={styles.starButton}
+              onPress={() => setRating(String(star))}
+              accessibilityRole="button"
+              accessibilityLabel={`${star} star${star > 1 ? 's' : ''}`}
+            >
+              <Text style={[styles.star, active && styles.starActive]}>{active ? '★' : '☆'}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={styles.ratingHint}>{rating}/5</Text>
 
       <Text style={styles.label}>Comment *</Text>
       <TextInput style={[styles.input, styles.tall]} value={comment} onChangeText={setComment} multiline />
@@ -214,6 +237,11 @@ const styles = StyleSheet.create({
   label: { fontWeight: '700', color: '#334155', marginBottom: 6, marginTop: 8 },
   input: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 12, padding: 12, fontSize: 16 },
   tall: { minHeight: 90, textAlignVertical: 'top' },
+  starRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  starButton: { paddingVertical: 4, paddingRight: 8 },
+  star: { fontSize: 28, color: '#cbd5e1' },
+  starActive: { color: '#f59e0b' },
+  ratingHint: { marginTop: 6, color: '#64748b', fontWeight: '600' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#e2e8f0' },
   chipOn: { backgroundColor: '#2563eb' },
