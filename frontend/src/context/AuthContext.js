@@ -86,25 +86,54 @@ export function AuthProvider({ children }) {
     setToken(json.token);
     await fetchProfile();
     return json;
-  }, [fetchProfile]);
+  }, []);
 
-  const register = useCallback(async ({ name, email, password }) => {
+  const register = useCallback(async ({ name, email, password, phone }) => {
     const response = await requestWithFallback('/api/users/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, phone }),
       skipAuth: true,
     });
     const json = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(json.message || `Register failed (${response.status})`);
+      const error = new Error(json.message || `Register failed (${response.status})`);
+      error.status = response.status;
+      error.payload = json;
+      throw error;
     }
-    if (!json.success || !json.token) {
+    if (!json.success) {
       throw new Error(json.message || 'Register failed');
     }
+
+    if (json.token) {
+      await setStoredToken(json.token);
+      setToken(json.token);
+      await fetchProfile();
+    }
+
+    return { status: response.status, data: json };
+  }, [fetchProfile]);
+
+  const resetPassword = useCallback(async ({ email, newPassword, confirmPassword }) => {
+    const response = await requestWithFallback('/api/users/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, newPassword, confirmPassword }),
+      skipAuth: true,
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(json.message || `Reset failed (${response.status})`);
+    }
+    if (!json.success || !json.token) {
+      throw new Error(json.message || 'Reset failed');
+    }
+
     await setStoredToken(json.token);
     setToken(json.token);
     await fetchProfile();
+
     return json;
   }, [fetchProfile]);
 
@@ -112,6 +141,11 @@ export function AuthProvider({ children }) {
     await clearStoredToken();
     setToken(null);
     setCurrentUser(null);
+  }, []);
+
+  const updateToken = useCallback(async (newToken) => {
+    await setStoredToken(newToken);
+    setToken(newToken);
   }, []);
 
   const value = useMemo(
@@ -122,12 +156,14 @@ export function AuthProvider({ children }) {
       ready,
       login,
       register,
+      resetPassword,
       logout,
+      updateToken,
       refreshProfile: fetchProfile,
       isAuthenticated: Boolean(token),
       isAdmin: currentUser?.role === 'admin',
     }),
-    [token, currentUser, ready, login, register, logout, fetchProfile]
+    [token, currentUser, ready, login, register, resetPassword, logout, updateToken, fetchProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -18,7 +18,7 @@ export default function BookingListScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useListScreenHeader(navigation, { addRoute: 'BookingForm', addLabel: '+ Add' });
+  useListScreenHeader(navigation, { addRoute: 'BookingForm', addLabel: '+ Add', showProfile: true });
 
   const load = useCallback(async () => {
     try {

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { requestWithFallback } from '../../config/api';
 import { useListScreenHeader } from '../../hooks/useListScreenHeader';
@@ -10,8 +10,10 @@ export default function UserListScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
 
-  useListScreenHeader(navigation, { addRoute: isAdmin ? 'UserForm' : null, addLabel: '+ Add' });
+  useListScreenHeader(navigation, { addRoute: isAdmin ? 'UserForm' : null, addLabel: '+ Add', showProfile: true });
 
   const load = useCallback(async () => {
     try {
@@ -34,6 +36,14 @@ export default function UserListScreen({ navigation }) {
       load();
     }, [load])
   );
+
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
+                          item.email.toLowerCase().includes(search.toLowerCase());
+    const matchesRole = roleFilter === 'all' || item.role === roleFilter;
+    
+    return matchesSearch && matchesRole;
+  });
 
   if (loading) {
     return (
@@ -62,8 +72,32 @@ export default function UserListScreen({ navigation }) {
           <Text style={styles.heroSub}>{items.length} registered users</Text>
         </View>
       ) : null}
+      {isAdmin ? (
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name or email..."
+            value={search}
+            onChangeText={setSearch}
+            placeholderTextColor="#999"
+          />
+          <View style={styles.roleFilterContainer}>
+            {['all', 'customer', 'admin'].map((r) => (
+              <TouchableOpacity 
+                key={r} 
+                style={[styles.roleTab, roleFilter === r && styles.roleTabActive]} 
+                onPress={() => setRoleFilter(r)}
+              >
+                <Text style={[styles.roleTabText, roleFilter === r && styles.roleTabTextActive]}>
+                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      ) : null}
       <FlatList
-        data={items}
+        data={filteredItems}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
@@ -73,7 +107,7 @@ export default function UserListScreen({ navigation }) {
             <Text style={styles.meta}>Role: {item.role}</Text>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>{isAdmin ? 'No users.' : 'User management is admin only.'}</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{isAdmin ? (search ? 'No matching users.' : 'No users.') : 'User management is admin only.'}</Text>}
       />
     </View>
   );
@@ -95,6 +129,49 @@ const styles = StyleSheet.create({
   },
   heroTitle: { fontSize: 18, fontWeight: '800', color: '#9a3412' },
   heroSub: { marginTop: 4, color: '#c2410c', fontWeight: '600' },
+  searchContainer: {
+    marginHorizontal: 16,
+    marginVertical: 10,
+  },
+  searchInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#1f2937',
+    marginBottom: 10,
+  },
+  roleFilterContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 2,
+  },
+  roleTab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  roleTabActive: {
+    backgroundColor: '#fff',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  roleTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  roleTabTextActive: {
+    color: '#1f2937',
+  },
   list: { padding: 16, paddingTop: 8 },
   card: {
     backgroundColor: '#fffdf8',

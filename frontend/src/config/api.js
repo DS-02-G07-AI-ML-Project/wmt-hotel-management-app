@@ -55,6 +55,9 @@ const getCandidateBaseUrls = () => {
  */
 export const requestWithFallback = async (path, options = {}) => {
   const { skipAuth = false, ...fetchOptions } = options;
+  if (__DEV__) {
+    console.log(`[API] ${fetchOptions.method || 'GET'} ${path} (skipAuth: ${skipAuth})`);
+  }
   const headers = {
     Accept: 'application/json',
     ...fetchOptions.headers,
@@ -64,6 +67,13 @@ export const requestWithFallback = async (path, options = {}) => {
     const token = await getStoredToken();
     if (token) {
       headers.Authorization = `Bearer ${token}`;
+      if (__DEV__) {
+        console.log(`[API] Token attached (length: ${token.length})`);
+      }
+    } else {
+      if (__DEV__) {
+        console.warn('[API] No token found in storage!');
+      }
     }
   }
 

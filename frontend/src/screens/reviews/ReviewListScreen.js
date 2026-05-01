@@ -10,7 +10,7 @@ export default function ReviewListScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  useListScreenHeader(navigation, { addRoute: 'ReviewForm', addLabel: '+ Add' });
+  useListScreenHeader(navigation, { addRoute: 'ReviewForm', addLabel: '+ Add', showProfile: true });
 
   const load = useCallback(async () => {
     try {

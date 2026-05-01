@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { requestWithFallback } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -44,6 +45,11 @@ export default function UserFormScreen({ navigation, route }) {
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      Alert.alert('Validation', 'Please enter a valid email address.');
+      return;
+    }
+
     const createPayload = {
       name: name.trim(),
       email: email.trim(),
@@ -71,8 +77,17 @@ export default function UserFormScreen({ navigation, route }) {
         Alert.alert('Error', json.message || 'Save failed');
         return;
       }
-      Alert.alert('Saved', 'User saved.');
-      navigation.goBack();
+      
+      const successMsg = json.message || (editId ? 'User updated successfully.' : 'User created successfully.');
+      
+      if (Platform.OS === 'web') {
+        window.alert(successMsg);
+        navigation.goBack();
+      } else {
+        Alert.alert('Success', successMsg, [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      }
     } catch {
       Alert.alert('Error', 'Network error');
     } finally {
@@ -101,16 +116,32 @@ export default function UserFormScreen({ navigation, route }) {
       <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
 
       {isAdmin ? (
-        <>
-          <Text style={styles.label}>Role</Text>
-          <View style={styles.row}>
-            {ROLES.map((r) => (
-              <TouchableOpacity key={r} style={[styles.chip, role === r && styles.chipOn]} onPress={() => setRole(r)}>
-                <Text style={[styles.chipText, role === r && styles.chipTextOn]}>{r}</Text>
-              </TouchableOpacity>
-            ))}
+        <View style={styles.roleSection}>
+          <Text style={styles.label}>Account Role</Text>
+          <View style={styles.roleContainer}>
+            {ROLES.map((r) => {
+              const isActive = role === r;
+              const iconName = r === 'admin' ? 'shield-account' : 'account';
+              return (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.roleButton, isActive && styles.roleButtonActive]}
+                  onPress={() => setRole(r)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons 
+                    name={iconName} 
+                    size={20} 
+                    color={isActive ? '#fff' : '#64748b'} 
+                  />
+                  <Text style={[styles.roleButtonText, isActive && styles.roleButtonTextActive]}>
+                    {r.charAt(0).toUpperCase() + r.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        </>
+        </View>
       ) : null}
 
       <TouchableOpacity style={styles.save} onPress={submit} disabled={saving}>
@@ -124,13 +155,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f5fb' },
   content: { padding: 16, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  label: { fontWeight: '600', color: '#475569', marginBottom: 6, marginTop: 8 },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 16 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#e2e8f0' },
-  chipOn: { backgroundColor: '#2563eb' },
-  chipText: { fontSize: 12, color: '#334155' },
-  chipTextOn: { color: '#fff', fontWeight: '600' },
-  save: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 20 },
-  saveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  label: { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 8, marginTop: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  input: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 12, padding: 14, fontSize: 16, color: '#1e293b' },
+  roleSection: { marginTop: 16, marginBottom: 8 },
+  roleContainer: { flexDirection: 'row', backgroundColor: '#f1f5f9', borderRadius: 12, padding: 4, gap: 4 },
+  roleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, gap: 8 },
+  roleButtonActive: { backgroundColor: '#2563eb', shadowColor: '#2563eb', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  roleButtonText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
+  roleButtonTextActive: { color: '#fff' },
+  save: { backgroundColor: '#2563eb', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 32, shadowColor: '#2563eb', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  saveText: { color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 0.5 },
 });

@@ -59,7 +59,7 @@ const apiLimiter = rateLimit({
 });
 
 // Middleware
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(compression());
 app.use(cors(corsOptions));
 app.use(express.json()); // Body parser
@@ -73,6 +73,7 @@ app.get('/health', (req, res) => {
     env: process.env.NODE_ENV || 'development',
     uptimeSec: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
+    version: 'reset-password-no-token',
   });
 });
 
