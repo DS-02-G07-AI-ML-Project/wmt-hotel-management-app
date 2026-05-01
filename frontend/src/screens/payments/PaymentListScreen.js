@@ -10,7 +10,7 @@ export default function PaymentListScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  useListScreenHeader(navigation, { addRoute: 'PaymentForm', addLabel: '+ Add Payment' });
+  useListScreenHeader(navigation, { addRoute: 'PaymentForm', addLabel: '+ Add Payment', showProfile: true });
 
   const load = useCallback(async () => {
     try {

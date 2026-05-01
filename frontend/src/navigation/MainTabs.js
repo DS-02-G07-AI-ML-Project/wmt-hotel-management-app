@@ -16,6 +16,8 @@ import BookingFormScreen from '../screens/bookings/BookingFormScreen';
 import UserListScreen from '../screens/users/UserListScreen';
 import UserDetailScreen from '../screens/users/UserDetailScreen';
 import UserFormScreen from '../screens/users/UserFormScreen';
+import ChangePasswordScreen from '../screens/users/ChangePasswordScreen';
+import ProfileScreen from '../screens/users/ProfileScreen';
 
 import PaymentListScreen from '../screens/payments/PaymentListScreen';
 import PaymentDetailScreen from '../screens/payments/PaymentDetailScreen';
@@ -45,6 +47,8 @@ function RoomStackScreen({ isAdmin }) {
       <RoomStack.Screen name="RoomDetail" component={RoomDetailScreen} options={{ title: 'Room' }} />
       {isAdmin ? <RoomStack.Screen name="AddRoom" component={AddRoomScreen} options={{ title: 'Add Room' }} /> : null}
       {isAdmin ? <RoomStack.Screen name="EditRoom" component={EditRoomScreen} options={{ title: 'Edit Room' }} /> : null}
+      <RoomStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password' }} />
+      <RoomStack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
     </RoomStack.Navigator>
   );
 }
@@ -59,12 +63,14 @@ function BookingStackScreen() {
   );
 }
 
-function UserStackScreen() {
+function UserStackScreen({ isAdmin }) {
   return (
-    <UserStack.Navigator initialRouteName="UserList" screenOptions={stackOptions}>
-      <UserStack.Screen name="UserList" component={UserListScreen} options={{ title: 'Users' }} />
-      <UserStack.Screen name="UserDetail" component={UserDetailScreen} />
-      <UserStack.Screen name="UserForm" component={UserFormScreen} options={{ title: 'User' }} />
+    <UserStack.Navigator initialRouteName={isAdmin ? "UserList" : "Profile"} screenOptions={stackOptions}>
+      {isAdmin ? <UserStack.Screen name="UserList" component={UserListScreen} options={{ title: 'Users' }} /> : null}
+      {isAdmin ? <UserStack.Screen name="UserDetail" component={UserDetailScreen} /> : null}
+      {isAdmin ? <UserStack.Screen name="UserForm" component={UserFormScreen} options={{ title: 'User' }} /> : null}
+      <UserStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password' }} />
+      <UserStack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
     </UserStack.Navigator>
   );
 }
@@ -99,12 +105,13 @@ function ReviewStackScreen() {
   );
 }
 
-export default function MainTabs() {
+export default function MainTabs({ initialRouteName }) {
   const { role } = useAuth();
   const isAdmin = role === 'admin';
 
   return (
     <Tab.Navigator
+      initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#0f766e',
@@ -139,21 +146,23 @@ export default function MainTabs() {
       {isAdmin ? (
         <Tab.Screen
           name="UsersTab"
-          component={UserStackScreen}
+          children={() => <UserStackScreen isAdmin={isAdmin} />}
           options={{
             title: 'Users',
             tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
           }}
         />
       ) : null}
-      <Tab.Screen
-        name="PaymentsTab"
-        component={PaymentStackScreen}
-        options={{
-          title: 'Pay',
-          tabBarIcon: ({ color, size }) => <Ionicons name="card" size={size} color={color} />,
-        }}
-      />
+      {!isCustomer ? (
+        <Tab.Screen
+          name="PaymentsTab"
+          component={PaymentStackScreen}
+          options={{
+            title: 'Pay',
+            tabBarIcon: ({ color, size }) => <Ionicons name="card" size={size} color={color} />,
+          }}
+        />
+      ) : null}
       <Tab.Screen
         name="ExperiencesTab"
         children={() => <ExperienceStackScreen isAdmin={isAdmin} />}

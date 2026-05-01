@@ -54,6 +54,7 @@ const RoomListScreen = ({ navigation }) => {
     showSignOut: true,
     addRoute: isAdmin ? 'AddRoom' : null,
     addLabel: '+ Add Room',
+    showProfile: true,
   });
 
   const renderRoomItem = ({ item }) => {

@@ -23,7 +23,7 @@ const UserSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['customer', 'staff', 'admin'],
+        enum: ['customer', 'admin'],
         default: 'customer',
     },
     phone: {
@@ -32,11 +32,21 @@ const UserSchema = new mongoose.Schema({
         trim: true,
         match: [/^[+()\d\s-]{7,20}$|^$/, 'Please add a valid phone number'],
     },
+    phoneNumber: {
+        type: String,
+        default: '',
+        trim: true,
+    },
     password: {
         type: String,
         required: [true, 'Please add a password'],
         minlength: [6, 'Password must be at least 6 characters'],
         select: false, // Do not return password by default
+    },
+    resetToken: {
+        type: String,
+        default: null,
+        select: false,
     },
     createdAt: {
         type: Date,
@@ -45,9 +55,9 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Encrypt password using bcrypt
-UserSchema.pre('save', async function (next) {
+UserSchema.pre('save', async function () {
     if (!this.isModified('password')) {
-        next();
+        return;
     }
 
     const salt = await bcrypt.genSalt(10);

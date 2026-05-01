@@ -47,7 +47,7 @@ export default function LoginScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Hotel management</Text>
+        <Text style={styles.title}>Hotel Management</Text>
         <Text style={styles.subtitle}>Sign in to manage rooms</Text>
 
         {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
@@ -83,6 +83,14 @@ export default function LoginScreen({ navigation }) {
           ) : (
             <Text style={styles.primaryBtnText}>Sign in</Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.linkBtn}
+          onPress={() => navigation.navigate('ForgotPassword')}
+          disabled={loading}
+        >
+          <Text style={styles.linkText}>Forgot Password?</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

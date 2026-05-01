@@ -10,7 +10,7 @@ export default function ExperienceListScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  useListScreenHeader(navigation, { addRoute: isAdmin ? 'ExperienceForm' : null, addLabel: '+ Add' });
+  useListScreenHeader(navigation, { addRoute: isAdmin ? 'ExperienceForm' : null, addLabel: '+ Add', showProfile: true });
 
   const load = useCallback(async () => {
     try {
